@@ -99,6 +99,10 @@ export function subscribeToMockStore(listener: Listener): () => void {
 }
 
 export const MockStore = {
+  subscribe(listener: Listener): () => void {
+    return subscribeToMockStore(listener);
+  },
+
   // Properties
   getProperties(): Property[] {
     return [...propertiesState];

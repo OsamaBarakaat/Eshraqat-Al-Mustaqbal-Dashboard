@@ -42,7 +42,7 @@ export const propertyFormSchema = z.object({
   amenities: z.array(z.string()).default([]),
 
   // Media
-  primaryImageUrl: z.string().url("رابط صورة الغلاف يجب أن يكون رابطاً صحيحاً"),
+  primaryImageUrl: z.string().min(1, "صورة الغلاف الرئيسية مطلوبة"),
 
   // SEO
   seoTitle: z.string().optional(),

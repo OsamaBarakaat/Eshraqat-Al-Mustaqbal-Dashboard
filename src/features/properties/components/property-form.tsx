@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,9 +13,16 @@ import {
   Globe,
   Save,
   CheckCircle,
+  UploadCloud,
+  Upload,
+  Trash2,
+  Plus,
+  Star,
+  Layers,
 } from "lucide-react";
 import { propertyFormSchema, PropertyFormValues } from "../schemas/property-schema";
-import { Property, PropertyCategory, PropertyStatus } from "@/types/property";
+import { Property, PropertyCategory, PropertyStatus, PropertyImage } from "@/types/property";
+import { Province, District } from "@/types/location";
 import { AMENITIES_LIST } from "@/lib/constants";
 import { MockStore } from "@/lib/services/mock-store";
 import { useToast } from "@/components/shared/toast-provider";
@@ -31,6 +38,48 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
   const { success, error: toastError } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Locations loaded dynamically from MockStore
+  const [provinces, setProvinces] = useState<Province[]>(() => MockStore.getLocations());
+
+  useEffect(() => {
+    const unsubscribe = MockStore.subscribe(() => {
+      setProvinces(MockStore.getLocations());
+    });
+    return unsubscribe;
+  }, []);
+
+  // Flattened enabled cities across Saudi provinces
+  const allCities = useMemo(() => {
+    const list: { id: string; name: string; provinceName: string; districts: District[] }[] = [];
+    provinces
+      .filter((p) => p.enabled)
+      .forEach((p) => {
+        p.cities
+          .filter((c) => c.enabled)
+          .forEach((c) => {
+            list.push({
+              id: c.id,
+              name: c.nameArabic,
+              provinceName: p.nameArabic,
+              districts: c.districts.filter((d) => d.enabled),
+            });
+          });
+      });
+    return list;
+  }, [provinces]);
+
+  // Secondary gallery images (all images excluding the primary cover)
+  const [galleryImages, setGalleryImages] = useState<PropertyImage[]>(() => {
+    if (initialData?.images && initialData.images.length > 0) {
+      const primaryImg = initialData.images.find((img) => img.isPrimary) || initialData.images[0];
+      return initialData.images.filter((img) => img !== primaryImg);
+    }
+    return [];
+  });
+
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
+
   // Default / initial values
   const defaultValues: Partial<PropertyFormValues> = {
     title: initialData?.title || "",
@@ -45,8 +94,8 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     area: initialData?.area || 180,
     areaUnit: initialData?.areaUnit || "م²",
     maintenanceFee: initialData?.maintenanceFee || 0,
-    country: initialData?.location.country || "المملكة العربية السعودية",
-    city: initialData?.location.city || "الرياض",
+    country: "المملكة العربية السعودية",
+    city: initialData?.location.city || "مدينة الرياض",
     areaName: initialData?.location.area || "حي النرجس",
     streetAddress: initialData?.location.streetAddress || "",
     bedrooms: initialData?.specs.residential?.bedrooms || 3,
@@ -63,8 +112,9 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     waterSource: initialData?.specs.agricultural?.waterSource || "بئر ارتوازي",
     amenities: initialData?.amenities || ["تكييف مركزي", "موقف سيارات خاص", "أمن وحراسة 24/7"],
     primaryImageUrl:
-      initialData?.images[0]?.url ||
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+      initialData?.images?.find((img) => img.isPrimary)?.url ||
+      initialData?.images?.[0]?.url ||
+      "",
     seoTitle: initialData?.seo.seoTitle || "",
     metaDescription: initialData?.seo.metaDescription || "",
     slug: initialData?.seo.slug || "",
@@ -85,6 +135,30 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
   const selectedAmenities = watch("amenities") || [];
   const primaryImageUrl = watch("primaryImageUrl");
   const title = watch("title");
+  const selectedCity = watch("city");
+  const selectedArea = watch("areaName");
+
+  // Dynamic available districts according to the selected city
+  const availableDistricts = useMemo(() => {
+    if (!selectedCity) return [];
+    const found = allCities.find(
+      (c) => c.name === selectedCity || c.name.includes(selectedCity) || selectedCity.includes(c.name)
+    );
+    return found ? found.districts : [];
+  }, [allCities, selectedCity]);
+
+  // Handle City Change: update city and select first district
+  const handleCityChange = (newCity: string) => {
+    setValue("city", newCity, { shouldValidate: true });
+    const found = allCities.find(
+      (c) => c.name === newCity || c.name.includes(newCity) || newCity.includes(c.name)
+    );
+    if (found && found.districts.length > 0) {
+      setValue("areaName", found.districts[0].nameArabic, { shouldValidate: true });
+    } else {
+      setValue("areaName", "", { shouldValidate: true });
+    }
+  };
 
   // Auto-generate slug from title if empty
   const handleGenerateSlug = () => {
@@ -110,10 +184,150 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     setValue("amenities", current);
   };
 
+  // Primary Cover image file upload from device
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toastError("نوع الملف غير مدعوم", "يرجى اختيار ملف صورة صالح (JPG, PNG, WebP).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toastError("حجم الملف كبير", "الحد الأقصى المسموح به لحجم صورة الغلاف هو 5 ميجابايت.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setValue("primaryImageUrl", result, { shouldValidate: true });
+      success("تم اختيار صورة الغلاف", "تم تحميل صورة الغلاف بنجاح من جهازك.");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Gallery multi-images upload from device
+  const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const validFiles: File[] = [];
+    let oversizedCount = 0;
+
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 5 * 1024 * 1024) {
+        oversizedCount++;
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (oversizedCount > 0) {
+      toastError("تنبيه الحجم", `تم استبعاد ${oversizedCount} صور لتجاوزها حجم 5 ميجابايت.`);
+    }
+
+    if (validFiles.length === 0) return;
+
+    let loadedCount = 0;
+    const newImages: PropertyImage[] = [];
+
+    validFiles.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+        newImages.push({
+          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 6)}`,
+          url: result,
+          caption: cleanName || "صورة من العقار",
+          isPrimary: false,
+        });
+
+        loadedCount++;
+        if (loadedCount === validFiles.length) {
+          setGalleryImages((prev) => [...prev, ...newImages]);
+          success("تم تحميل الصور بنجاح", `تمت إضافة ${newImages.length} صور إلى المعرض.`);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = "";
+  };
+
+  const removeGalleryImage = (id: string) => {
+    setGalleryImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const updateImageCaption = (id: string, caption: string) => {
+    setGalleryImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, caption } : img))
+    );
+  };
+
+  const makeImagePrimary = (galleryImg: PropertyImage) => {
+    const currentPrimaryUrl = watch("primaryImageUrl");
+    if (currentPrimaryUrl) {
+      setGalleryImages((prev) => [
+        ...prev.filter((img) => img.id !== galleryImg.id),
+        {
+          id: `img-${Date.now()}`,
+          url: currentPrimaryUrl,
+          caption: "صورة العقار",
+          isPrimary: false,
+        },
+      ]);
+    } else {
+      setGalleryImages((prev) => prev.filter((img) => img.id !== galleryImg.id));
+    }
+    setValue("primaryImageUrl", galleryImg.url, { shouldValidate: true });
+    success("تم تعيين الغلاف", "تم تعيين هذه الصورة كغلاف رئيسي للعقار بنجاح.");
+  };
+
+  const removePrimaryImage = () => {
+    setValue("primaryImageUrl", "", { shouldValidate: true });
+  };
+
   const onSubmit = (data: PropertyFormValues, statusOverride?: PropertyStatus) => {
     setIsSubmitting(true);
     try {
       const finalStatus = statusOverride || data.status;
+
+      // Construct complete images array
+      const finalImages: PropertyImage[] = [];
+
+      // 1. Primary Cover Image
+      if (data.primaryImageUrl) {
+        finalImages.push({
+          id: initialData?.images?.find((img) => img.isPrimary)?.id || `img-primary-${Date.now()}`,
+          url: data.primaryImageUrl,
+          caption: "صورة الغلاف الرئيسية",
+          isPrimary: true,
+        });
+      }
+
+      // 2. Additional Gallery Images
+      galleryImages.forEach((img, idx) => {
+        finalImages.push({
+          ...img,
+          id: img.id || `img-gallery-${idx}-${Date.now()}`,
+          isPrimary: false,
+        });
+      });
+
+      // 3. Fallback default if empty
+      if (finalImages.length === 0) {
+        finalImages.push({
+          id: `img-default-${Date.now()}`,
+          url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+          caption: "صورة افتراضية للعقار",
+          isPrimary: true,
+        });
+      }
 
       const propertyPayload = {
         code: data.code,
@@ -165,14 +379,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
               : undefined,
         },
         amenities: data.amenities,
-        images: [
-          {
-            id: `img-${Date.now()}`,
-            url: data.primaryImageUrl,
-            caption: "صورة الغلاف الرئيسية",
-            isPrimary: true,
-          },
-        ],
+        images: finalImages,
         seo: {
           seoTitle: data.seoTitle || data.title,
           metaDescription: data.metaDescription || data.shortDescription,
@@ -329,57 +536,74 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-primary-text mb-1.5">الدولة</label>
+            <label className="block text-xs font-semibold text-primary-text mb-1.5 flex items-center justify-between">
+              <span>الدولة</span>
+              <span className="text-[10px] text-secondary-text font-normal">(ثابتة)</span>
+            </label>
             <input
               type="text"
               {...register("country")}
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+              value="المملكة العربية السعودية"
+              readOnly
+              tabIndex={-1}
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-zinc-100/80 border border-neutral-border rounded-xl text-secondary-text font-medium cursor-not-allowed select-none focus:outline-hidden"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-primary-text mb-1.5">المدينة</label>
-            <input
-              type="text"
-              list="saudi-cities-list"
-              {...register("city")}
-              placeholder="الرياض، جدة، الدمام، مكة..."
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-            />
-            <datalist id="saudi-cities-list">
-              <option value="الرياض" />
-              <option value="مدينة جدة" />
-              <option value="مكة المكرمة" />
-              <option value="الدمام" />
-              <option value="الخبر" />
-              <option value="الخرج" />
-              <option value="الدرعية" />
-            </datalist>
+            <label className="block text-xs font-semibold text-primary-text mb-1.5">
+              المدينة <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedCity}
+              onChange={(e) => handleCityChange(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold cursor-pointer"
+            >
+              <option value="" disabled>
+                اختر المدينة...
+              </option>
+              {provinces
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <optgroup key={p.id} label={p.nameArabic}>
+                    {p.cities
+                      .filter((c) => c.enabled)
+                      .map((c) => (
+                        <option key={c.id} value={c.nameArabic}>
+                          {c.nameArabic}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+            </select>
+            {errors.city && <p className="text-xs text-rose-500 mt-1">{errors.city.message}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-primary-text mb-1.5">المنطقة أو الحي</label>
-            <input
-              type="text"
-              list="saudi-districts-list"
+            <label className="block text-xs font-semibold text-primary-text mb-1.5">
+              المنطقة أو الحي <span className="text-rose-500">*</span>
+            </label>
+            <select
               {...register("areaName")}
-              placeholder="حي النرجس، حي الياسمين، حي الملقا..."
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-            />
-            <datalist id="saudi-districts-list">
-              <option value="حي النرجس" />
-              <option value="حي الياسمين" />
-              <option value="حي الملقا" />
-              <option value="حي حطين" />
-              <option value="حي العليا" />
-              <option value="حي الشاطئ" />
-              <option value="حي الروضة" />
-              <option value="حي الحمراء" />
-              <option value="أبحر الشمالية" />
-              <option value="حي العزيزية" />
-              <option value="حي الفيصلية" />
-              <option value="حي الحزام الذهبي" />
-            </datalist>
+              disabled={availableDistricts.length === 0 && !selectedArea}
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold cursor-pointer disabled:bg-zinc-100 disabled:cursor-not-allowed"
+            >
+              {availableDistricts.length === 0 && !selectedArea ? (
+                <option value="">اختر المدينة أولاً لتحديد الحي</option>
+              ) : (
+                <>
+                  {selectedArea && !availableDistricts.some((d) => d.nameArabic === selectedArea) && (
+                    <option value={selectedArea}>{selectedArea} (مخصص)</option>
+                  )}
+                  {availableDistricts.map((d) => (
+                    <option key={d.id} value={d.nameArabic}>
+                      {d.nameArabic}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+            {errors.areaName && <p className="text-xs text-rose-500 mt-1">{errors.areaName.message}</p>}
           </div>
 
           <div className="sm:col-span-3">
@@ -648,39 +872,216 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
       </div>
 
       {/* Section F: Media & Cover Image */}
-      <div className="p-6 rounded-2xl bg-surface border border-neutral-border shadow-xs space-y-5">
+      <div className="p-6 rounded-2xl bg-surface border border-neutral-border shadow-xs space-y-6">
         <div className="flex items-center gap-2.5 pb-4 border-b border-neutral-border-subtle">
           <div className="p-2 rounded-xl bg-amber-50 text-amber-700">
             <ImageIcon className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-base text-primary-text">و. صور العقار والوسائط</h3>
-            <p className="text-xs text-secondary-text mt-0.5">صورة الغلاف الرئيسية والصور الملحقة</p>
+            <p className="text-xs text-secondary-text mt-0.5">
+              صورة الغلاف الرئيسية وصور المعرض الإضافية يتم تحميلها مباشرة من جهازك
+            </p>
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-primary-text mb-1.5">
-            رابط صورة الغلاف الرئيسية <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="url"
-            {...register("primaryImageUrl")}
-            placeholder="https://images.unsplash.com/..."
-            className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono dir-ltr focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-          />
-          {errors.primaryImageUrl && <p className="text-xs text-rose-500 mt-1">{errors.primaryImageUrl.message}</p>}
-        </div>
-
-        {primaryImageUrl && (
-          <div className="mt-3">
-            <p className="text-xs text-secondary-text mb-2">معاينة الغلاف:</p>
-            <div className="relative w-full max-w-sm aspect-video rounded-xl overflow-hidden border border-neutral-border bg-zinc-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={primaryImageUrl} alt="معاينة الغلاف" className="w-full h-full object-cover" />
+        {/* 1. Primary Cover Image (Single file upload from device) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-xs font-bold text-primary-text">
+                صورة الغلاف الرئيسية <span className="text-rose-500">*</span>
+              </label>
+              <p className="text-[11px] text-secondary-text mt-0.5">
+                تظهر كصورة بارزة في بطاقة العقار، نتائج البحث، وتصدّر صفحة تفاصيل العقار
+              </p>
             </div>
+            {primaryImageUrl && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                <Star className="w-3 h-3 text-amber-600 fill-amber-500" />
+                <span>الغلاف محدد</span>
+              </span>
+            )}
           </div>
-        )}
+
+          <input
+            ref={coverFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverFileChange}
+          />
+
+          {primaryImageUrl ? (
+            <div className="relative rounded-2xl overflow-hidden border border-neutral-border bg-zinc-900 group shadow-xs">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={primaryImageUrl}
+                alt="صورة الغلاف الرئيسية"
+                className="w-full h-56 sm:h-72 object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent flex flex-col justify-between p-4">
+                <div className="flex justify-end">
+                  <span className="px-3 py-1 rounded-xl bg-black/60 backdrop-blur-xs text-white text-xs font-semibold flex items-center gap-1.5 border border-white/10">
+                    <Star className="w-3.5 h-3.5 text-brand-gold fill-brand-gold" />
+                    صورة الغلاف الرسمية
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => coverFileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-brand-charcoal bg-white/95 hover:bg-white rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>تغيير صورة الغلاف من جهازك</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removePrimaryImage}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 bg-white/95 hover:bg-rose-50 rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>حذف الغلاف</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => coverFileInputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3",
+                errors.primaryImageUrl
+                  ? "border-rose-400 bg-rose-50/30 hover:bg-rose-50/50"
+                  : "border-neutral-border hover:border-brand-gold bg-warm-white/70 hover:bg-brand-gold/5"
+              )}
+            >
+              <div className="p-3.5 rounded-2xl bg-amber-50 text-amber-700">
+                <UploadCloud className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-primary-text">
+                  انقر هنا لاختيار صورة الغلاف الرئيسية من جهازك
+                </p>
+                <p className="text-xs text-secondary-text">
+                  صيغ مدعومة: JPG، PNG، WebP (الحد الأقصى الموصى به 5 ميجابايت)
+                </p>
+              </div>
+              <button
+                type="button"
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs cursor-pointer pointer-events-none"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>استعراض جهازك واختيار الغلاف</span>
+              </button>
+            </div>
+          )}
+          {errors.primaryImageUrl && (
+            <p className="text-xs text-rose-500 font-medium">{errors.primaryImageUrl.message}</p>
+          )}
+        </div>
+
+        {/* 2. Gallery Images Multi-Upload (Multiple files upload from device) */}
+        <div className="pt-5 border-t border-neutral-border-subtle space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <label className="block text-xs font-bold text-primary-text">
+                  صور المعرض الإضافية
+                </label>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-secondary-text">
+                  {galleryImages.length} صور مرفوعة
+                </span>
+              </div>
+              <p className="text-[11px] text-secondary-text mt-0.5">
+                يمكنك اختيار عدة صور معاً من جهازك للغرف والمرافق والتشطيبات لعرضها في سلايدر الصور
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => galleryFileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>إضافة صور متعددة من جهازك</span>
+            </button>
+          </div>
+
+          <input
+            ref={galleryFileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={handleGalleryFilesChange}
+          />
+
+          {galleryImages.length === 0 ? (
+            <div
+              onClick={() => galleryFileInputRef.current?.click()}
+              className="border border-dashed border-neutral-border rounded-xl p-6 text-center cursor-pointer bg-warm-white/40 hover:bg-zinc-100/60 transition-all flex flex-col items-center justify-center gap-2"
+            >
+              <div className="p-2.5 rounded-xl bg-zinc-100 text-secondary-text">
+                <Layers className="w-6 h-6" />
+              </div>
+              <p className="text-xs font-semibold text-primary-text">
+                لا توجد صور إضافية في المعرض حالياً
+              </p>
+              <p className="text-[11px] text-secondary-text">
+                اضغط هنا لرفع عدة صور دفعة واحدة من جهازك وإظهارها في شريحة المعاينة (Swiper)
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {galleryImages.map((img, idx) => (
+                <div
+                  key={img.id}
+                  className="rounded-xl border border-neutral-border bg-surface p-2.5 space-y-2 shadow-2xs group"
+                >
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-zinc-100 border border-neutral-border-subtle">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt={img.caption || `صورة ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] font-mono">
+                      #{idx + 1}
+                    </span>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
+                      <button
+                        type="button"
+                        onClick={() => makeImagePrimary(img)}
+                        title="تعيين كغلاف رئيسي"
+                        className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-brand-charcoal text-xs font-medium flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        <span className="text-[10px]">كغلاف</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeGalleryImage(img.id)}
+                        title="حذف الصورة"
+                        className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs shadow-xs cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={img.caption || ""}
+                    onChange={(e) => updateImageCaption(img.id, e.target.value)}
+                    placeholder="وصف مختصر (اختياري)..."
+                    className="w-full px-2 py-1 text-xs bg-warm-white border border-neutral-border rounded-lg focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-brand-gold"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Section G: SEO & Publication */}

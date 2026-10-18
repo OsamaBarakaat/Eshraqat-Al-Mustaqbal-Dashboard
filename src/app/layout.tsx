@@ -14,10 +14,12 @@ export const metadata: Metadata = {
   description: "لوحة التحكم الإدارية لشركة إشراقة المستقبل للعقارات - نحو غدٍ مشرق",
   icons: {
     icon: [
-      { url: "/Logo/Eshraqat-Al-Mustakbal-Logo.png", href: "/Logo/Eshraqat-Al-Mustakbal-Logo.png" },
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/Logo/Eshraqat-Al-Mustakbal-Logo.png", type: "image/png" },
     ],
-    shortcut: "/Logo/Eshraqat-Al-Mustakbal-Logo.png",
-    apple: "/Logo/Eshraqat-Al-Mustakbal-Logo.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
 };
 
