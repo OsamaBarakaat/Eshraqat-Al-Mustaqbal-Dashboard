@@ -1,0 +1,119 @@
+import {
+  FAQ,
+  WebsitePageContent,
+  ContactSettings,
+  SocialLink,
+  HomepageContent,
+  SeoDefaults,
+} from "@/types/content";
+
+export const INITIAL_FAQS: FAQ[] = [
+  {
+    id: "faq-1",
+    question: "كيف يمكنني حجز موعد لمعاينة عقار معروض على المنصة؟",
+    answer: "يمكنك التوجه إلى صفحة العقار والضغط على زر 'طلب معاينة'، وتحديد اليوم والساعة المناسبة لك ورقم الهاتف. سيقوم أحد مستشاري المبيعات لدينا بمراجعة طلبك والتأكيد معك خلال ساعتي عمل.",
+    displayOrder: 1,
+    published: true,
+    category: "GENERAL",
+  },
+  {
+    id: "faq-2",
+    question: "ما هي الأوراق والمستندات المطلوبة لشراء عقار كاش أو بالتقسيط؟",
+    answer: "لشراء عقار كاش يُكتفى ببطاقة الرقم القومي سارية أو جواز السفر للمصريين بالخارج. أما للتقسيط فيتم تقديم شيكات بنكية مطابقة لجدول الأقساط وإثبات دخل أو سجل تجاري ساري.",
+    displayOrder: 2,
+    published: true,
+    category: "BUYING",
+  },
+  {
+    id: "faq-3",
+    question: "هل تقدم شركة إشراقة المستقبل استشارات تقييم وتسعير العقارات مجاناً؟",
+    answer: "نعم، يقدم فريق الخبراء لدينا دراسة تسعيرية مقارنة ومجانية للملاك الراغبين في طرح عقاراتهم للبيع أو الإيجار استناداً لأحدث أسعار السوق والصفقات المماثلة في المنطقة.",
+    displayOrder: 3,
+    published: true,
+    category: "SELLING",
+  },
+  {
+    id: "faq-4",
+    question: "ما هي الإجراءات المتبعة للتحقق من سلامة الأوراق والتراخيص القانونية؟",
+    answer: "يقوم قسم الشؤون القانونية بالشركة بالاطلاع على أصل تسلسل الملكية، وتراخيص البناء، ومخالصة الجهاز أو الحي، والتأكد من عدم وجود أي مستحقات أو نزاعات قضائية قبل توقيع أي عقد.",
+    displayOrder: 4,
+    published: true,
+    category: "GENERAL",
+  },
+];
+
+export const INITIAL_PAGES: WebsitePageContent[] = [
+  {
+    id: "page-privacy",
+    slug: "privacy-policy",
+    title: "سياسة الخصوصية وحماية البيانات",
+    content: "نحن في شركة إشراقة المستقبل للعقارات نلتزم بأعلى معايير حماية وخصوصية بيانات عملائنا وزوار موقعنا الإلكتروني. نقوم بجمع البيانات الشخصية مثل الاسم ورقم الهاتف والبريد الإلكتروني فقط لتسهيل عمليات التواصل العقاري وتقديم عروض مخصصة تناسب رغباتكم. لا نقوم بمشاركة أو بيع بياناتكم لأي طرف ثالث غير معني بالمعاملة العقارية.",
+    published: true,
+    updatedAt: "2026-10-01T10:00:00.000Z",
+  },
+  {
+    id: "page-terms",
+    slug: "terms-conditions",
+    title: "الشروط والأحكام العامة للاستخدام",
+    content: "تنظم هذه الشروط استخدام الموقع الإلكتروني ومنصة إشراقة المستقبل للعقارات. جميع العروض والأسعار والمواصفات المعروضة على المنصة استرشادية ويتم تأكيدها رسمياً عند المعاينة وتوقيع عقود الحجز. تحتفظ الشركة بحق تعديل أو إيقاف أي خدمة دون إشعار مسبق.",
+    published: true,
+    updatedAt: "2026-10-01T10:00:00.000Z",
+  },
+];
+
+export const INITIAL_CONTACT_SETTINGS: ContactSettings = {
+  companyName: "شركة إشراقة المستقبل للعقارات",
+  contactPhone: "+20 100 123 4567",
+  secondaryPhone: "+20 2 2795 8899",
+  email: "info@eshraqat-realestate.com",
+  address: "مصر - القاهرة الجديدة، التجمع الخامس، شارع التسعين الشمالي، مجمع أوبال الإداري، الدور الرابع",
+  workingHours: "السبت إلى الخميس: 9:00 صباحاً - 6:00 مساءً (الجمعة عطلة أسبوعية)",
+  locationMapUrl: "https://maps.google.com/?q=New+Cairo+Fifth+Settlement",
+};
+
+export const INITIAL_SOCIAL_LINKS: SocialLink[] = [
+  {
+    id: "soc-1",
+    platform: "WHATSAPP",
+    title: "واتساب المبيعات المباشر",
+    url: "https://wa.me/201001234567",
+    enabled: true,
+  },
+  {
+    id: "soc-2",
+    platform: "INSTAGRAM",
+    title: "حساب إنستغرام الرسمي",
+    url: "https://instagram.com/eshraqat.realestate",
+    enabled: true,
+  },
+  {
+    id: "soc-3",
+    platform: "FACEBOOK",
+    title: "صفحة فيسبوك الرسمية",
+    url: "https://facebook.com/eshraqat.realestate",
+    enabled: true,
+  },
+  {
+    id: "soc-4",
+    platform: "LINKEDIN",
+    title: "صفحة لينكد إن للشركات",
+    url: "https://linkedin.com/company/eshraqat-realestate",
+    enabled: true,
+  },
+];
+
+export const INITIAL_HOMEPAGE_CONTENT: HomepageContent = {
+  heroTitle: "وجهتك الموثوقة لأرقى العقارات والاستثمارات الواعدة في مصر",
+  heroSubtitle: "نربطك بأفضل الفيلات، الشقق الفاخرة، والمقرات الإدارية بأعلى عائد استثماري وخطط سداد ميسرة.",
+  ctaLabel: "استكشف أحدث العقارات المميزة",
+  ctaLink: "/properties",
+  heroBannerImage: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
+  badgeText: "إشراقة المستقبل للعقارات — نحو غدٍ مشرق",
+};
+
+export const INITIAL_SEO_DEFAULTS: SeoDefaults = {
+  websiteTitle: "إشراقة المستقبل للعقارات | فيلات وشقق ومقرات إدارية فاخرة",
+  defaultMetaDescription: "الشركة الرائدة في الوساطة والاستشارات العقارية في القاهرة الجديدة، الشيخ زايد، العاصمة الإدارية والساحل الشمالي.",
+  socialSharingImage: "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80",
+  defaultKeywords: "عقارات مصر, فيلا للبيع التجمع الخامس, شقق الشيخ زايد, مكاتب العاصمة الإدارية, إشراقة المستقبل",
+};

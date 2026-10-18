@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-charcoal: #171717;
+  --color-brand-charcoal-dark: #0f0f0f;
+  --color-brand-charcoal-light: #242424;
+  --color-brand-charcoal-muted: #3a3a3a;
+  
+  --color-brand-gold: #C6A15B;
+  --color-brand-gold-hover: #b5914b;
+  --color-brand-gold-deep: #A98242;
+  --color-brand-gold-light: #F9F5EC;
+  --color-brand-gold-subtle: #fcfaf4;
+  
+  --color-warm-white: #FAFAF8;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8F8F6;
+  --color-neutral-border: #E5E5E0;
+  --color-neutral-border-subtle: #ECECE8;
+  
+  --color-primary-text: #1C1917;
+  --color-secondary-text: #71717A;
+  --color-muted-text: #A1A1AA;
+  
+  --font-cairo: var(--font-cairo), Cairo, system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --background: #FAFAF8;
+  --foreground: #1C1917;
+  --card: #FFFFFF;
+  --card-foreground: #1C1917;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1917;
+  --primary: #C6A15B;
+  --primary-foreground: #171717;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #18181B;
+  --muted: #F4F4F5;
+  --muted-foreground: #71717A;
+  --accent: #F9F5EC;
+  --accent-foreground: #A98242;
+  --destructive: #EF4444;
+  --destructive-foreground: #FAFAFA;
+  --border: #E5E5E0;
+  --input: #E5E5E0;
+  --ring: #C6A15B;
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Custom RTL-friendly scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1ed;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4cb;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C6A15B;
+}
+
+/* Tabular numbers for financial and ID display */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Safe direction utility for phone numbers & IDs */
+.dir-ltr {
+  direction: ltr;
+  text-align: right;
+  unicode-bidi: embed;
+}
