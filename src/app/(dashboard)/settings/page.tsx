@@ -80,8 +80,8 @@ export default function SettingsPage() {
   // Handle Save Profile
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminName.trim() || !adminEmail.trim()) {
-      warning("حقول مطلوبة", "يرجى ملء الاسم الكامل والبريد الإلكتروني.");
+    if (!adminName.trim()) {
+      warning("حقول مطلوبة", "يرجى ملء الاسم الكامل.");
       return;
     }
 
@@ -89,9 +89,7 @@ export default function SettingsPage() {
     try {
       MockStore.updateUser(user.id, {
         name: adminName.trim(),
-        email: adminEmail.trim(),
         phone: adminPhone.trim(),
-        department: adminDepartment.trim(),
       });
       success("تم حفظ البيانات بنجاح", "تم تحديث بيانات ملفك الشخصي في قاعدة البيانات.");
     } catch {
@@ -308,27 +306,45 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-primary-text mb-1">البريد الإلكتروني المهني:</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-primary-text">البريد الإلكتروني المهني:</label>
+                  <span className="text-[10px] text-muted flex items-center gap-1 font-medium bg-neutral-light px-1.5 py-0.5 rounded border border-neutral-border">
+                    <Lock className="w-2.5 h-2.5" /> غير قابل للتعديل
+                  </span>
+                </div>
                 <input
                   type="email"
                   value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
+                  readOnly
+                  disabled
                   placeholder="name@eshraqat.sa"
-                  className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl dir-ltr focus:ring-2 focus:ring-brand-gold"
+                  className="w-full p-2.5 text-xs sm:text-sm bg-neutral-light/70 border border-neutral-border text-secondary-text rounded-xl dir-ltr cursor-not-allowed select-none opacity-80"
+                  title="البريد الإلكتروني المهني هو معرّف الدخول الرسمي ولا يمكن تغييره إلا من خلال إدارة الفريق"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-primary-text mb-1">القسم / الإدارة:</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-primary-text">القسم / الإدارة:</label>
+                  <span className="text-[10px] text-muted flex items-center gap-1 font-medium bg-neutral-light px-1.5 py-0.5 rounded border border-neutral-border">
+                    <Lock className="w-2.5 h-2.5" /> يُدار عبر الإدارة
+                  </span>
+                </div>
                 <input
                   type="text"
-                  value={adminDepartment}
-                  onChange={(e) => setAdminDepartment(e.target.value)}
+                  value={adminDepartment || "الإدارة العامة"}
+                  readOnly
+                  disabled
                   placeholder="مثال: الإدارة العامة، المبيعات..."
-                  className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:ring-2 focus:ring-brand-gold"
+                  className="w-full p-2.5 text-xs sm:text-sm bg-neutral-light/70 border border-neutral-border text-secondary-text rounded-xl cursor-not-allowed select-none opacity-80"
+                  title="يتم تعيين القسم الوظيفي مركزياً من شاشة إدارة الفريق والصلاحيات"
                 />
               </div>
             </div>
+
+            <p className="text-[11px] text-muted bg-warm-white/80 border border-neutral-border-subtle rounded-xl p-2.5 leading-relaxed">
+              🔒 <strong className="text-primary-text font-medium">ملاحظة أمنية:</strong> البريد الإلكتروني الرسمي والقسم الوظيفي مرتبطان بهوية الحساب الرسمية والصلاحيات الممنوحة له، وتعديلهما يتم حصراً عبر شاشة إدارة الفريق.
+            </p>
 
             <div className="pt-2 flex justify-end">
               <button
