@@ -1024,6 +1024,10 @@ export const MockStore = {
     if (index === -1) return null;
 
     usersState[index] = { ...usersState[index], ...updates };
+    if (id === currentUserIdState || id === currentUserObj.id) {
+      currentUserObj = { ...currentUserObj, ...updates };
+    }
+    saveCachedState();
     notifyListeners();
 
     const matchingRole = updates.role ? rolesState.find((r) => r.name === updates.role || r.id === updates.role) : undefined;
