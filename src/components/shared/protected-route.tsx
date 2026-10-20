@@ -24,6 +24,7 @@ const MODULE_NAMES: Record<ModuleType, string> = {
   reports: "التقارير الإحصائية",
   team: "المسؤولون وفريق العمل",
   settings: "الإعدادات العامة",
+  locations: "المناطق والمدن والأحياء",
 };
 
 const ACTION_NAMES: Record<ActionType, string> = {

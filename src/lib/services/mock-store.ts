@@ -12,56 +12,49 @@ import { DashboardStats } from "@/types/stats";
 import { AuditActivity } from "@/types/common";
 import { apiClient } from "./api-client";
 
-import { INITIAL_PROPERTIES } from "../mock-data/properties";
-import { INITIAL_APPOINTMENTS } from "../mock-data/appointments";
-import { INITIAL_CLIENTS } from "../mock-data/clients";
-import { INITIAL_INQUIRIES } from "../mock-data/inquiries";
-import { INITIAL_USERS, INITIAL_ROLES } from "../mock-data/team";
-import { INITIAL_PROJECTS, INITIAL_DEVELOPERS } from "../mock-data/projects";
 import {
-  INITIAL_FAQS,
-  INITIAL_PAGES,
   INITIAL_CONTACT_SETTINGS,
-  INITIAL_SOCIAL_LINKS,
   INITIAL_HOMEPAGE_CONTENT,
   INITIAL_SEO_DEFAULTS,
 } from "../mock-data/content";
-import { INITIAL_SAUDI_LOCATIONS } from "../mock-data/locations";
 
 // ==========================================
-// IN-MEMORY CACHE
+// IN-MEMORY CACHE (DYNAMIC - SYNCS WITH POSTGRESQL/SUPABASE)
 // ==========================================
-let propertiesState: Property[] = [...INITIAL_PROPERTIES];
-let appointmentsState: Appointment[] = [...INITIAL_APPOINTMENTS];
-let clientsState: Client[] = [...INITIAL_CLIENTS];
-let inquiriesState: Inquiry[] = [...INITIAL_INQUIRIES];
-let usersState: AdminUser[] = [...INITIAL_USERS];
-let rolesState: Role[] = [...INITIAL_ROLES];
-const projectsState: Project[] = [...INITIAL_PROJECTS];
-const developersState: Developer[] = [...INITIAL_DEVELOPERS];
-let locationsState: Province[] = [...INITIAL_SAUDI_LOCATIONS];
-let faqsState: FAQ[] = [...INITIAL_FAQS];
-let pagesState: WebsitePageContent[] = [...INITIAL_PAGES];
+let propertiesState: Property[] = [];
+let appointmentsState: Appointment[] = [];
+let clientsState: Client[] = [];
+let inquiriesState: Inquiry[] = [];
+let usersState: AdminUser[] = [];
+let rolesState: Role[] = [];
+const projectsState: Project[] = [];
+const developersState: Developer[] = [];
+let locationsState: Province[] = [];
+let faqsState: FAQ[] = [];
+let pagesState: WebsitePageContent[] = [];
 let contactSettingsState: ContactSettings = { ...INITIAL_CONTACT_SETTINGS };
-let socialLinksState: SocialLink[] = [...INITIAL_SOCIAL_LINKS];
+let socialLinksState: SocialLink[] = [];
 let homepageState: HomepageContent = { ...INITIAL_HOMEPAGE_CONTENT };
 let seoState: SeoDefaults = { ...INITIAL_SEO_DEFAULTS };
-let currentUserIdState: string = INITIAL_USERS[0].id;
-let currentUserObj: AdminUser = { ...INITIAL_USERS[0] };
-let isInitializedFromBackend = false;
 
-let auditLogState: AuditActivity[] = [
-  {
-    id: "act-1",
-    action: "تأكيد موعد معاينة",
-    actorName: "م. أسامة",
-    actorRole: "مدير عام النظام",
-    targetType: "appointment",
-    targetTitle: "معاينة دوبلكس الياسمين - د. هالة الشربيني",
-    timestamp: new Date().toISOString(),
-    details: "تم التنسيق هاتفياً وتأكيد الموعد غداً الساعة 3:30 عصراً",
-  },
-];
+const defaultAdminUser: AdminUser = {
+  id: "admin-default",
+  name: "م. أسامة (المدير العام)",
+  email: "admin@eshraqat.sa",
+  role: "SUPER_ADMIN",
+  status: "ACTIVE",
+  phone: "+966 50 123 4567",
+  department: "الإدارة العامة",
+  createdAt: new Date().toISOString(),
+  lastActiveAt: new Date().toISOString(),
+};
+
+let currentUserIdState: string = defaultAdminUser.id;
+let currentUserObj: AdminUser = { ...defaultAdminUser };
+let isInitializedFromBackend = false;
+let isLoadingBackend = false;
+
+let auditLogState: AuditActivity[] = [];
 
 type Listener = () => void;
 const listeners: Set<Listener> = new Set();
@@ -266,6 +259,7 @@ export const MockStore = {
         }
       }
 
+      isLoadingBackend = true;
       // 2. Load Core Modules in parallel
       const [
         propertiesRes,
@@ -281,6 +275,7 @@ export const MockStore = {
         faqsRes,
         socialRes,
         pagesRes,
+        auditRes,
       ] = await Promise.allSettled([
         apiClient.get<any>("/properties", { limit: 100 }),
         apiClient.get<any>("/locations"),
@@ -295,6 +290,7 @@ export const MockStore = {
         apiClient.get<any>("/cms/faqs"),
         apiClient.get<any>("/cms/social-links"),
         apiClient.get<any>("/cms/pages"),
+        apiClient.get<any>("/audit-logs", { limit: 15 }),
       ]);
 
       if (propertiesRes.status === "fulfilled" && propertiesRes.value?.items) {
@@ -411,6 +407,20 @@ export const MockStore = {
         pagesState = pagesRes.value;
       }
 
+      // 3. Map Real Audit Activity Log from Backend
+      if (auditRes.status === "fulfilled" && auditRes.value?.items && Array.isArray(auditRes.value.items)) {
+        auditLogState = auditRes.value.items.map((log: any) => ({
+          id: log.id,
+          action: log.action,
+          actorName: log.actorName,
+          actorRole: log.actorRole,
+          targetType: log.targetType,
+          targetTitle: log.targetTitle,
+          timestamp: log.createdAt || new Date().toISOString(),
+          details: log.details,
+        }));
+      }
+
       // If CMS endpoints failed, fallback to public bootstrap
       if (homepageRes.status !== "fulfilled" || contactRes.status !== "fulfilled") {
         try {
@@ -431,7 +441,10 @@ export const MockStore = {
       isInitializedFromBackend = true;
       notifyListeners();
     } catch {
-      // Keep initial data if offline
+      // Keep state as is
+    } finally {
+      isLoadingBackend = false;
+      notifyListeners();
     }
   },
 
@@ -460,7 +473,16 @@ export const MockStore = {
 
   logout() {
     apiClient.clearTokens();
-    currentUserObj = { ...INITIAL_USERS[0] };
+    currentUserObj = { ...defaultAdminUser };
+    currentUserIdState = defaultAdminUser.id;
+    propertiesState = [];
+    appointmentsState = [];
+    clientsState = [];
+    inquiriesState = [];
+    usersState = [];
+    rolesState = [];
+    auditLogState = [];
+    isInitializedFromBackend = false;
     notifyListeners();
   },
 
@@ -830,7 +852,7 @@ export const MockStore = {
       const found = usersState.find((u) => u.id === currentUserIdState);
       if (found) return found;
     }
-    return currentUserObj || usersState[0] || INITIAL_USERS[0];
+    return currentUserObj || usersState[0] || defaultAdminUser;
   },
 
   setCurrentUser(userId: string): boolean {
@@ -844,7 +866,28 @@ export const MockStore = {
 
   getCurrentRole(): Role | undefined {
     const user = this.getCurrentUser();
-    return rolesState.find((r) => r.name === user.role || r.id === user.role);
+    const found = rolesState.find((r) => r.name === user.role || r.id === user.role);
+    if (found) return found;
+    if (user.role === "SUPER_ADMIN") {
+      return {
+        id: "role-super-admin",
+        name: "SUPER_ADMIN",
+        titleArabic: "مدير عام النظام",
+        description: "صلاحيات مطلقة لإدارة كامل وحدات النظام والمستخدمين والصلاحيات",
+        permissions: [
+          { module: "properties", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "appointments", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "clients", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "inquiries", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "websiteContent", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "reports", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "team", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "settings", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+          { module: "locations", actions: ["view", "create", "edit", "delete", "publish", "assign", "managePermissions"] },
+        ],
+      };
+    }
+    return undefined;
   },
 
   hasPermission(module: ModuleType, action: ActionType): boolean {
@@ -1314,7 +1357,7 @@ export const MockStore = {
   },
 
   // ------------------------------------------
-  // AUDIT LOG
+  // AUDIT LOG (LIVE & PERSISTENT)
   // ------------------------------------------
   getAuditLog(): AuditActivity[] {
     return [...auditLogState];
@@ -1327,6 +1370,35 @@ export const MockStore = {
       timestamp: new Date().toISOString(),
     };
     auditLogState = [newActivity, ...auditLogState.slice(0, 19)];
+    notifyListeners();
+
+    // Async persist to live backend database in PostgreSQL
+    apiClient
+      .post("/audit-logs", {
+        actorName: newActivity.actorName,
+        actorRole: newActivity.actorRole,
+        action: newActivity.action,
+        targetType: newActivity.targetType,
+        targetTitle: newActivity.targetTitle,
+        details: newActivity.details,
+      })
+      .then((created) => {
+        if (created?.id) {
+          newActivity.id = created.id;
+          notifyListeners();
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to persist audit log on backend:", err);
+      });
+  },
+
+  isLoading(): boolean {
+    return isLoadingBackend;
+  },
+
+  isLoaded(): boolean {
+    return isInitializedFromBackend;
   },
 
   // ------------------------------------------

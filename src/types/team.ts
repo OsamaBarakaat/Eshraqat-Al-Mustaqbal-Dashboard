@@ -17,7 +17,8 @@ export type ModuleType =
   | "websiteContent"
   | "reports"
   | "team"
-  | "settings";
+  | "settings"
+  | "locations";
 
 export type ActionType =
   | "view"

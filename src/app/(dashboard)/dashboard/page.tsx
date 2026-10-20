@@ -14,7 +14,6 @@ import {
   Eye,
   FileText,
   AlertCircle,
-  Sparkles,
   ChevronLeft,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
@@ -77,9 +76,9 @@ export default function DashboardPage() {
         title="لوحة التحكم والمؤشرات العامة"
         description="نظرة شاملة وسريعة على حركة العقارات، طلبات المعاينة الجديدة، والعملاء واستفسارات الموقع."
         badge={
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-gold/15 text-brand-gold-deep border border-brand-gold/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            بيانات تجريبية استرشادية
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            متصل بقاعدة البيانات الحية
           </span>
         }
         primaryAction={
@@ -380,57 +379,63 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {recentProperties.map((prop) => {
-              const statusCfg = PROPERTY_STATUS_CONFIG[prop.status];
-              return (
-                <Link
-                  key={prop.id}
-                  href={`/properties/${prop.id}`}
-                  className="group rounded-xl border border-neutral-border-subtle p-3 hover:border-brand-gold/40 hover:shadow-xs transition-all bg-warm-white/50 block"
-                >
-                  <div className="relative aspect-video rounded-lg overflow-hidden mb-2.5 bg-zinc-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={prop.images[0]?.url}
-                      alt={prop.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-2 right-2">
-                      <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
+          {recentProperties.length === 0 ? (
+            <div className="p-8 text-center bg-warm-white/40 rounded-xl border border-dashed border-neutral-border text-xs text-secondary-text">
+              لا توجد عقارات مضافة بعد. يمكنك النقر على &quot;إضافة عقار جديد&quot; لبدء إضافة عقاراتك.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {recentProperties.map((prop) => {
+                const statusCfg = PROPERTY_STATUS_CONFIG[prop.status];
+                return (
+                  <Link
+                    key={prop.id}
+                    href={`/properties/${prop.id}`}
+                    className="group rounded-xl border border-neutral-border-subtle p-3 hover:border-brand-gold/40 hover:shadow-xs transition-all bg-warm-white/50 block"
+                  >
+                    <div className="relative aspect-video rounded-lg overflow-hidden mb-2.5 bg-zinc-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={prop.images[0]?.url}
+                        alt={prop.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 right-2">
+                        <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
+                      </div>
+                      {prop.originalPrice && prop.originalPrice > prop.price && prop.discountPercentage && (
+                        <div className="absolute top-2 left-2">
+                          <span className="px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold shadow-xs">
+                            خصم {prop.discountPercentage}%
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {prop.originalPrice && prop.originalPrice > prop.price && prop.discountPercentage && (
-                      <div className="absolute top-2 left-2">
-                        <span className="px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold shadow-xs">
-                          خصم {prop.discountPercentage}%
+
+                    <span className="text-[11px] font-mono font-semibold text-brand-gold-deep">{prop.code}</span>
+                    <h4 className="font-bold text-xs sm:text-sm text-primary-text truncate mt-0.5 group-hover:text-brand-gold-deep transition-colors">
+                      {prop.title}
+                    </h4>
+                    {prop.originalPrice && prop.originalPrice > prop.price ? (
+                      <div className="flex items-center gap-1.5 mt-1 font-tabular">
+                        <span className="text-xs font-bold text-emerald-600">
+                          {formatCurrency(prop.price)}
+                        </span>
+                        <span className="text-[10px] text-zinc-400 line-through">
+                          {formatCurrency(prop.originalPrice)}
                         </span>
                       </div>
-                    )}
-                  </div>
-
-                  <span className="text-[11px] font-mono font-semibold text-brand-gold-deep">{prop.code}</span>
-                  <h4 className="font-bold text-xs sm:text-sm text-primary-text truncate mt-0.5 group-hover:text-brand-gold-deep transition-colors">
-                    {prop.title}
-                  </h4>
-                  {prop.originalPrice && prop.originalPrice > prop.price ? (
-                    <div className="flex items-center gap-1.5 mt-1 font-tabular">
-                      <span className="text-xs font-bold text-emerald-600">
+                    ) : (
+                      <p className="text-xs font-semibold text-primary-text font-tabular mt-1">
                         {formatCurrency(prop.price)}
-                      </span>
-                      <span className="text-[10px] text-zinc-400 line-through">
-                        {formatCurrency(prop.originalPrice)}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-xs font-semibold text-primary-text font-tabular mt-1">
-                      {formatCurrency(prop.price)}
-                    </p>
-                  )}
-                  <p className="text-[11px] text-secondary-text mt-0.5 truncate">{prop.location.area}</p>
-                </Link>
-              );
-            })}
-          </div>
+                      </p>
+                    )}
+                    <p className="text-[11px] text-secondary-text mt-0.5 truncate">{prop.location.area}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Audit Activity Log (1 Col) */}
@@ -439,24 +444,30 @@ export default function DashboardPage() {
             <h3 className="font-bold text-sm sm:text-base text-primary-text">
               سجل النشاط الإداري الأخير
             </h3>
-            <p className="text-xs text-secondary-text mt-0.5">عمليات الموظفين والمشرفين باللوحة</p>
+            <p className="text-xs text-secondary-text mt-0.5">عمليات الموظفين والمشرفين باللوحة (حي ومباشر)</p>
           </div>
 
-          <div className="space-y-4">
-            {auditLog.slice(0, 5).map((log) => (
-              <div key={log.id} className="relative pr-4 border-r-2 border-brand-gold/40">
-                <span className="absolute -right-[5px] top-1.5 w-2 h-2 rounded-full bg-brand-gold" />
-                <p className="font-semibold text-xs text-primary-text leading-tight">{log.action}</p>
-                <p className="text-[11px] text-secondary-text mt-0.5 truncate" title={log.targetTitle}>
-                  {log.targetTitle}
-                </p>
-                <div className="flex items-center justify-between text-[10px] text-muted-text mt-1">
-                  <span>{log.actorName}</span>
-                  <span>{formatDateTime(log.timestamp)}</span>
+          {auditLog.length === 0 ? (
+            <div className="p-6 text-center bg-warm-white/40 rounded-xl border border-dashed border-neutral-border text-xs text-secondary-text">
+              لا توجد عمليات إدارية مسجلة بعد في قاعدة البيانات.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {auditLog.slice(0, 5).map((log) => (
+                <div key={log.id} className="relative pr-4 border-r-2 border-brand-gold/40">
+                  <span className="absolute -right-[5px] top-1.5 w-2 h-2 rounded-full bg-brand-gold" />
+                  <p className="font-semibold text-xs text-primary-text leading-tight">{log.action}</p>
+                  <p className="text-[11px] text-secondary-text mt-0.5 truncate" title={log.targetTitle}>
+                    {log.targetTitle}
+                  </p>
+                  <div className="flex items-center justify-between text-[10px] text-muted-text mt-1">
+                    <span>{log.actorName}</span>
+                    <span>{formatDateTime(log.timestamp)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

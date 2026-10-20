@@ -22,8 +22,8 @@ interface AppHeaderProps {
 
 export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
   const router = useRouter();
-  const { success, info } = useToast();
-  const { user, role, allUsers, switchUser, hasModule } = usePermissions();
+  const { success } = useToast();
+  const { user, role, hasModule } = usePermissions();
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -94,28 +94,6 @@ export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
                   <span className="inline-block mt-1 text-[10px] font-semibold text-brand-gold-deep bg-brand-gold/15 px-2 py-0.5 rounded-md border border-brand-gold/25">
                     الدور: {role?.titleArabic || user.role}
                   </span>
-                </div>
-
-                {/* Role Simulation Switcher for Testing */}
-                <div className="p-2 rounded-xl bg-warm-white border border-neutral-border-subtle space-y-1.5">
-                  <span className="block text-[10px] font-bold text-secondary-text">
-                    تجربة الأدوار والصلاحيات (Simulator):
-                  </span>
-                  <select
-                    value={user.id}
-                    onChange={(e) => {
-                      switchUser(e.target.value);
-                      const targetUser = allUsers.find((u) => u.id === e.target.value);
-                      info("تم تبديل المستخدم الحالي", `أنت الآن تتصفح بصلاحيات (${targetUser?.name}).`);
-                    }}
-                    className="w-full p-1.5 text-[11px] font-medium bg-surface border border-neutral-border rounded-lg text-primary-text cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-brand-gold"
-                  >
-                    {allUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.role})
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <Link
