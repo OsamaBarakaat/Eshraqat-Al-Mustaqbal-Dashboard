@@ -49,6 +49,7 @@ export interface AdminUser {
   phone: string;
   role: RoleType;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  password?: string;
   avatar?: string;
   department?: string;
   lastActiveAt: string;

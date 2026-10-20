@@ -994,6 +994,7 @@ export const MockStore = {
         phone: user.phone,
         department: user.department,
         roleId: matchingRole?.id || rolesState[0]?.id,
+        password: user.password || "Eshraqat@2026",
       })
       .then((created) => {
         if (created?.id) {
@@ -1006,6 +1007,16 @@ export const MockStore = {
       });
 
     return newUser;
+  },
+
+  async resetUserPassword(userId: string, newPassword: string): Promise<boolean> {
+    try {
+      await apiClient.patch(`/users/${userId}/reset-password`, { newPassword });
+      return true;
+    } catch (err) {
+      console.error("Failed to reset password on backend:", err);
+      throw err;
+    }
   },
 
   updateUser(id: string, updates: Partial<AdminUser>): AdminUser | null {

@@ -13,6 +13,9 @@ import {
   PlusCircle,
   ShieldAlert,
   Trash2,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
 import { PageHeader } from "@/components/layout/page-header";
@@ -43,6 +46,8 @@ export default function TeamPermissionsPage() {
   const [userPhone, setUserPhone] = useState("");
   const [userDepartment, setUserDepartment] = useState("");
   const [userRole, setUserRole] = useState<RoleType>("SALES_AGENT");
+  const [userPassword, setUserPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Selected Role for Permission Matrix
   const [selectedRoleType, setSelectedRoleType] = useState<string>("SUPER_ADMIN");
@@ -72,6 +77,8 @@ export default function TeamPermissionsPage() {
     setUserPhone("");
     setUserDepartment("قطاع المبيعات");
     setUserRole("SALES_AGENT");
+    setUserPassword("");
+    setShowPassword(false);
     setUserModalOpen(true);
   };
 
@@ -82,10 +89,12 @@ export default function TeamPermissionsPage() {
     setUserPhone(u.phone);
     setUserDepartment(u.department || "");
     setUserRole(u.role);
+    setUserPassword("");
+    setShowPassword(false);
     setUserModalOpen(true);
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (!userName.trim() || !userEmail.trim()) return;
 
     if (editingUser) {
@@ -96,8 +105,19 @@ export default function TeamPermissionsPage() {
         department: userDepartment.trim(),
         role: userRole,
       });
-      success("تم تحديث بيانات الموظف", `تم حفظ التعديلات على حساب (${userName}).`);
+
+      if (userPassword.trim()) {
+        try {
+          await MockStore.resetUserPassword(editingUser.id, userPassword.trim());
+          success("تم تحديث الحساب وكلمة المرور", `تم حفظ التعديلات وتعيين كلمة المرور الجديدة لـ (${userName}).`);
+        } catch {
+          warning("تنبيه", "تم حفظ بيانات الموظف ولكن حدث خطأ أثناء تحديث كلمة المرور.");
+        }
+      } else {
+        success("تم تحديث بيانات الموظف", `تم حفظ التعديلات على حساب (${userName}).`);
+      }
     } else {
+      const pass = userPassword.trim() || "Eshraqat@2026";
       MockStore.addUser({
         name: userName.trim(),
         email: userEmail.trim(),
@@ -105,8 +125,9 @@ export default function TeamPermissionsPage() {
         department: userDepartment.trim(),
         role: userRole,
         status: "ACTIVE",
+        password: pass,
       });
-      success("تمت إضافة الموظف بنجاح", `تم إنشاء حساب جديد لـ (${userName}).`);
+      success("تمت إضافة الموظف بنجاح", `تم إنشاء حساب لـ (${userName}) بكلمة مرور: ${pass}`);
     }
     setUserModalOpen(false);
   };
@@ -615,6 +636,46 @@ export default function TeamPermissionsPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-primary-text flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-brand-gold-deep" />
+                    <span>{editingUser ? "تعيين كلمة مرور جديدة (اختياري):" : "كلمة مرور تسجيل الدخول:"}</span>
+                  </label>
+                  {!editingUser && (
+                    <span className="text-[10px] text-brand-gold-deep bg-brand-gold/10 px-1.5 py-0.5 rounded-md font-medium">
+                      الافتراضية: Eshraqat@2026
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    placeholder={
+                      editingUser
+                        ? "اتركه فارغاً للإبقاء على كلمة المرور الحالية"
+                        : "اكتب كلمة مرور الحساب (أو اتركه للافتراضية)"
+                    }
+                    className="w-full p-2.5 pl-10 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl dir-ltr focus:ring-2 focus:ring-brand-gold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-secondary-text hover:text-primary-text p-1 cursor-pointer"
+                    title={showPassword ? "إخفاء" : "إظهار"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-secondary-text mt-1">
+                  {editingUser
+                    ? "إذا تركت الحقل فارغاً، فلن يتم تعديل كلمة المرور السابقة للمستخدم."
+                    : "سيتمكن الموظف من تسجيل الدخول فوراً بهذا البريد وكلمة المرور."}
+                </p>
               </div>
             </div>
 
