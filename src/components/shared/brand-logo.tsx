@@ -25,7 +25,12 @@ export function BrandLogo({
   // Large full emblem for Login Page or Hero
   if (size === "lg") {
     const FullEmblem = (
-      <div className={cn("flex flex-col items-center text-center select-none", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center text-center select-none",
+          className
+        )}
+      >
         <div className="relative w-32 h-36 sm:w-40 sm:h-44 transition-transform duration-300 hover:scale-105 drop-shadow-xl">
           <Image
             src="/Logo/Eshraqat-Al-Mustakbal-Logo.png"
@@ -41,7 +46,10 @@ export function BrandLogo({
 
     if (href) {
       return (
-        <Link href={href} className="inline-block transition-opacity hover:opacity-95 cursor-pointer">
+        <Link
+          href={href}
+          className="inline-block transition-opacity hover:opacity-95 cursor-pointer"
+        >
           {FullEmblem}
         </Link>
       );
@@ -101,7 +109,10 @@ export function BrandLogo({
 
   if (href) {
     return (
-      <Link href={href} className="inline-block transition-opacity hover:opacity-90 cursor-pointer">
+      <Link
+        href={href}
+        className="inline-block transition-opacity hover:opacity-90 cursor-pointer"
+      >
         {Content}
       </Link>
     );
