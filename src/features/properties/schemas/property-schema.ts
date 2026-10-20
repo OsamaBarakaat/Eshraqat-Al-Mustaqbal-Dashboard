@@ -12,6 +12,9 @@ export const propertyFormSchema = z.object({
   // Pricing
   price: z.coerce.number().positive("السعر يجب أن يكون قيمة موجبة أكبر من صفر"),
   currency: z.string().default("ر.س"),
+  hasDiscount: z.boolean().default(false).optional(),
+  originalPrice: z.coerce.number().positive("السعر الأصلي يجب أن يكون قيمة موجبة").optional(),
+  discountPercentage: z.coerce.number().min(1, "نسبة الخصم يجب أن تكون 1% على الأقل").max(99, "نسبة الخصم لا يمكن أن تتجاوز 99%").optional(),
   area: z.coerce.number().positive("المساحة يجب أن تكون قيمة موجبة أكبر من صفر"),
   areaUnit: z.enum(["م²", "فدان"]),
   maintenanceFee: z.coerce.number().optional(),

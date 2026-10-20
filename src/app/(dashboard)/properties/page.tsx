@@ -15,6 +15,7 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  Tag,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
 import { PageHeader } from "@/components/layout/page-header";
@@ -30,7 +31,7 @@ import {
   PROPERTY_PURPOSE_LABELS,
   PROPERTY_STATUS_CONFIG,
 } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { Property, PropertyStatus } from "@/types/property";
 
 export default function PropertiesListPage() {
@@ -45,6 +46,7 @@ export default function PropertiesListPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [cityFilter, setCityFilter] = useState("ALL");
   const [districtFilter, setDistrictFilter] = useState("ALL");
+  const [discountFilter, setDiscountFilter] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -105,10 +107,12 @@ export default function PropertiesListPage() {
       if (cityFilter !== "ALL" && prop.location.city !== cityFilter) return false;
       // District / Area
       if (districtFilter !== "ALL" && prop.location.area !== districtFilter) return false;
+      // Discount filter
+      if (discountFilter && !(prop.originalPrice && prop.originalPrice > prop.price)) return false;
 
       return true;
     });
-  }, [properties, search, categoryFilter, purposeFilter, statusFilter, cityFilter, districtFilter]);
+  }, [properties, search, categoryFilter, purposeFilter, statusFilter, cityFilter, districtFilter, discountFilter]);
 
   // Paginated records
   const totalPages = Math.max(1, Math.ceil(filteredProperties.length / pageSize));
@@ -122,6 +126,7 @@ export default function PropertiesListPage() {
   const publishedCount = properties.filter((p) => p.status === "PUBLISHED").length;
   const draftCount = properties.filter((p) => p.status === "DRAFT").length;
   const soldOrRentedCount = properties.filter((p) => p.status === "SOLD" || p.status === "RENTED").length;
+  const discountedCount = properties.filter((p) => p.originalPrice && p.originalPrice > p.price).length;
 
   // Actions
   const handleTogglePublish = (prop: Property) => {
@@ -152,6 +157,7 @@ export default function PropertiesListPage() {
     setStatusFilter("ALL");
     setCityFilter("ALL");
     setDistrictFilter("ALL");
+    setDiscountFilter(false);
     setCurrentPage(1);
   };
 
@@ -161,7 +167,8 @@ export default function PropertiesListPage() {
     purposeFilter !== "ALL" ||
     statusFilter !== "ALL" ||
     cityFilter !== "ALL" ||
-    districtFilter !== "ALL";
+    districtFilter !== "ALL" ||
+    discountFilter;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -235,7 +242,29 @@ export default function PropertiesListPage() {
           </div>
 
           {/* Reset button & Results count */}
-          <div className="flex items-center justify-between md:justify-end gap-3 shrink-0">
+          <div className="flex items-center justify-between md:justify-end gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setDiscountFilter((prev) => !prev);
+                setCurrentPage(1);
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all border cursor-pointer",
+                discountFilter
+                  ? "bg-rose-50 text-rose-700 border-rose-300 shadow-2xs"
+                  : "bg-warm-white text-secondary-text hover:text-primary-text border-neutral-border hover:bg-zinc-100"
+              )}
+            >
+              <Tag className="w-3.5 h-3.5 text-rose-500" />
+              <span>عروض وخصومات</span>
+              {discountedCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500 text-white font-bold font-tabular">
+                  {discountedCount}
+                </span>
+              )}
+            </button>
+
             <span className="text-xs text-secondary-text">
               النتائج: <strong className="text-primary-text font-tabular">{filteredProperties.length}</strong>
             </span>
@@ -368,13 +397,18 @@ export default function PropertiesListPage() {
                       {/* Title & Image */}
                       <td className="py-3 px-4 max-w-xs">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-neutral-border">
+                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-neutral-border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={prop.images[0]?.url}
                               alt={prop.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
+                            {prop.originalPrice && prop.originalPrice > prop.price && prop.discountPercentage && (
+                              <span className="absolute top-0 right-0 px-1 py-0.2 bg-rose-600 text-white text-[9px] font-bold rounded-bl-md shadow-xs">
+                                %{prop.discountPercentage}-
+                              </span>
+                            )}
                           </div>
                           <div className="overflow-hidden">
                             <Link
@@ -418,8 +452,28 @@ export default function PropertiesListPage() {
                       </td>
 
                       {/* Price in SAR */}
-                      <td className="py-3 px-4 font-bold text-primary-text font-tabular whitespace-nowrap">
-                        {formatCurrency(prop.price, prop.currency)}
+                      <td className="py-3 px-4 font-tabular whitespace-nowrap">
+                        {prop.originalPrice && prop.originalPrice > prop.price ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-emerald-600">
+                                {formatCurrency(prop.price, prop.currency)}
+                              </span>
+                              {prop.discountPercentage && (
+                                <span className="px-1.5 py-0.2 rounded-md bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold">
+                                  -{prop.discountPercentage}%
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-zinc-400 line-through font-tabular">
+                              {formatCurrency(prop.originalPrice, prop.currency)}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-primary-text">
+                            {formatCurrency(prop.price, prop.currency)}
+                          </span>
+                        )}
                       </td>
 
                       {/* Area */}

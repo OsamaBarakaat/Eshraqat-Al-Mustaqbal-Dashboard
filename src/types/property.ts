@@ -71,6 +71,8 @@ export interface Property {
   // Pricing
   price: number;
   currency: string; // default "EGP"
+  originalPrice?: number; // Price before discount (if discount is active)
+  discountPercentage?: number; // Discount percentage (e.g. 10 for 10%)
   area: number; // in square meters or feddans
   areaUnit: "م²" | "فدان";
   maintenanceFee?: number;

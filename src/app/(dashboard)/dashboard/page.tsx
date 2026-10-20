@@ -399,15 +399,33 @@ export default function DashboardPage() {
                     <div className="absolute top-2 right-2">
                       <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
                     </div>
+                    {prop.originalPrice && prop.originalPrice > prop.price && prop.discountPercentage && (
+                      <div className="absolute top-2 left-2">
+                        <span className="px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold shadow-xs">
+                          خصم {prop.discountPercentage}%
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <span className="text-[11px] font-mono font-semibold text-brand-gold-deep">{prop.code}</span>
                   <h4 className="font-bold text-xs sm:text-sm text-primary-text truncate mt-0.5 group-hover:text-brand-gold-deep transition-colors">
                     {prop.title}
                   </h4>
-                  <p className="text-xs font-semibold text-primary-text font-tabular mt-1">
-                    {formatCurrency(prop.price)}
-                  </p>
+                  {prop.originalPrice && prop.originalPrice > prop.price ? (
+                    <div className="flex items-center gap-1.5 mt-1 font-tabular">
+                      <span className="text-xs font-bold text-emerald-600">
+                        {formatCurrency(prop.price)}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 line-through">
+                        {formatCurrency(prop.originalPrice)}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-primary-text font-tabular mt-1">
+                      {formatCurrency(prop.price)}
+                    </p>
+                  )}
                   <p className="text-[11px] text-secondary-text mt-0.5 truncate">{prop.location.area}</p>
                 </Link>
               );

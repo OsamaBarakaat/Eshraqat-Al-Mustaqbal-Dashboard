@@ -19,6 +19,8 @@ import {
   Plus,
   Star,
   Layers,
+  Tag,
+  TrendingDown,
 } from "lucide-react";
 import { propertyFormSchema, PropertyFormValues } from "../schemas/property-schema";
 import { Property, PropertyCategory, PropertyStatus, PropertyImage } from "@/types/property";
@@ -91,6 +93,13 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     status: initialData?.status || "PUBLISHED",
     price: initialData?.price || 1500000,
     currency: initialData?.currency || "ر.س",
+    hasDiscount: Boolean(initialData?.originalPrice && initialData.originalPrice > initialData.price),
+    originalPrice: initialData?.originalPrice || undefined,
+    discountPercentage:
+      initialData?.discountPercentage ||
+      (initialData?.originalPrice && initialData.originalPrice > initialData.price
+        ? Math.round(((initialData.originalPrice - initialData.price) / initialData.originalPrice) * 100)
+        : undefined),
     area: initialData?.area || 180,
     areaUnit: initialData?.areaUnit || "م²",
     maintenanceFee: initialData?.maintenanceFee || 0,
@@ -137,6 +146,11 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
   const title = watch("title");
   const selectedCity = watch("city");
   const selectedArea = watch("areaName");
+  const hasDiscount = Boolean(watch("hasDiscount"));
+  const price = watch("price") as number | undefined;
+  const originalPrice = watch("originalPrice") as number | undefined;
+  const discountPercentage = watch("discountPercentage") as number | undefined;
+  const currency = (watch("currency") as string) || "ر.س";
 
   // Dynamic available districts according to the selected city
   const availableDistricts = useMemo(() => {
@@ -292,6 +306,61 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     setValue("primaryImageUrl", "", { shouldValidate: true });
   };
 
+  // Discount change handlers
+  const handleToggleDiscount = (enabled: boolean) => {
+    setValue("hasDiscount", enabled, { shouldValidate: true });
+    if (enabled) {
+      const currentPrice = Number(watch("price")) || 1500000;
+      const currentOriginal = Number(watch("originalPrice"));
+      if (!currentOriginal || currentOriginal <= currentPrice) {
+        setValue("originalPrice", currentPrice, { shouldValidate: true });
+        setValue("discountPercentage", 10, { shouldValidate: true });
+        const discountedPrice = Math.round(currentPrice * 0.9);
+        setValue("price", discountedPrice, { shouldValidate: true });
+      }
+    } else {
+      const orig = Number(watch("originalPrice"));
+      if (orig && orig > 0) {
+        setValue("price", orig, { shouldValidate: true });
+      }
+      setValue("originalPrice", undefined, { shouldValidate: true });
+      setValue("discountPercentage", undefined, { shouldValidate: true });
+    }
+  };
+
+  const handleOriginalPriceChange = (newOrig: number) => {
+    setValue("originalPrice", newOrig, { shouldValidate: true });
+    const pct = Number(watch("discountPercentage"));
+    if (pct > 0 && newOrig > 0) {
+      const discounted = Math.round(newOrig * (1 - pct / 100));
+      setValue("price", discounted, { shouldValidate: true });
+    } else if (newOrig > 0 && Number(watch("price")) > 0 && newOrig > Number(watch("price"))) {
+      const calculatedPct = Math.round(((newOrig - Number(watch("price"))) / newOrig) * 100);
+      setValue("discountPercentage", calculatedPct, { shouldValidate: true });
+    }
+  };
+
+  const handleDiscountPercentageChange = (pct: number) => {
+    setValue("discountPercentage", pct, { shouldValidate: true });
+    const orig = Number(watch("originalPrice")) || Number(watch("price"));
+    if (orig > 0) {
+      if (!watch("originalPrice")) {
+        setValue("originalPrice", orig, { shouldValidate: true });
+      }
+      const discounted = Math.round(orig * (1 - pct / 100));
+      setValue("price", discounted, { shouldValidate: true });
+    }
+  };
+
+  const handleFinalPriceChange = (finalP: number) => {
+    setValue("price", finalP, { shouldValidate: true });
+    const orig = Number(watch("originalPrice"));
+    if (orig > finalP && orig > 0) {
+      const calculatedPct = Math.round(((orig - finalP) / orig) * 100);
+      setValue("discountPercentage", calculatedPct, { shouldValidate: true });
+    }
+  };
+
   const onSubmit = (data: PropertyFormValues, statusOverride?: PropertyStatus) => {
     setIsSubmitting(true);
     try {
@@ -339,6 +408,16 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
         status: finalStatus,
         price: Number(data.price),
         currency: data.currency,
+        originalPrice:
+          data.hasDiscount && data.originalPrice && Number(data.originalPrice) > Number(data.price)
+            ? Number(data.originalPrice)
+            : undefined,
+        discountPercentage:
+          data.hasDiscount && data.originalPrice && Number(data.originalPrice) > Number(data.price)
+            ? (data.discountPercentage
+                ? Number(data.discountPercentage)
+                : Math.round(((Number(data.originalPrice) - Number(data.price)) / Number(data.originalPrice)) * 100))
+            : undefined,
         area: Number(data.area),
         areaUnit: data.areaUnit,
         maintenanceFee: data.maintenanceFee ? Number(data.maintenanceFee) : undefined,
@@ -634,13 +713,26 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-primary-text mb-1.5">
-              السعر المطلوب <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-primary-text mb-1.5 flex items-center justify-between">
+              <span>
+                {hasDiscount ? "السعر النهائي بعد الخصم" : "السعر المطلوب"}{" "}
+                <span className="text-rose-500">*</span>
+              </span>
+              {hasDiscount && (
+                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
+                  خصم مفعّل
+                </span>
+              )}
             </label>
             <input
               type="number"
               {...register("price")}
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-tabular focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+              className={cn(
+                "w-full px-3.5 py-2.5 text-xs sm:text-sm border rounded-xl font-tabular focus:outline-hidden focus:ring-2",
+                hasDiscount
+                  ? "bg-emerald-50/50 border-emerald-300 text-emerald-900 font-bold focus:ring-emerald-500 focus:bg-white"
+                  : "bg-warm-white border-neutral-border focus:bg-white focus:ring-brand-gold"
+              )}
             />
             {errors.price && <p className="text-xs text-rose-500 mt-1">{errors.price.message}</p>}
           </div>
@@ -692,6 +784,149 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-tabular focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
           </div>
+        </div>
+
+        {/* Special Offer & Discount Subsection */}
+        <div className="pt-4 border-t border-neutral-border-subtle space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gradient-to-r from-amber-50/70 to-warm-white border border-amber-200/80">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+                <Tag className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs sm:text-sm font-bold text-primary-text block">
+                  عروض وخصومات السعر (Special Offer / Discount)
+                </span>
+                <span className="text-[11px] text-secondary-text">
+                  تفعيل خصم تسويقي على هذا العقار لإظهار السعر القديم مشطوباً ونسبة التوفير لجذب العملاء
+                </span>
+              </div>
+            </div>
+
+            {/* Toggle Switch */}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(hasDiscount)}
+                onChange={(e) => handleToggleDiscount(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              <span className="mr-2 text-xs font-semibold text-primary-text select-none">
+                {hasDiscount ? "الخصم مفعّل" : "تفعيل الخصم"}
+              </span>
+            </label>
+          </div>
+
+          {hasDiscount && (
+            <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in duration-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* 1. Original Price before discount */}
+                <div>
+                  <label className="block text-xs font-bold text-primary-text mb-1.5 flex items-center justify-between">
+                    <span>السعر الأصلي قبل الخصم ({currency}) <span className="text-rose-500">*</span></span>
+                  </label>
+                  <input
+                    type="number"
+                    value={originalPrice !== undefined && originalPrice !== null ? String(originalPrice) : ""}
+                    onChange={(e) => handleOriginalPriceChange(Number(e.target.value))}
+                    placeholder="مثال: 2000000"
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-neutral-border rounded-xl font-tabular focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {errors.originalPrice && (
+                    <p className="text-xs text-rose-500 mt-1">{errors.originalPrice.message}</p>
+                  )}
+                </div>
+
+                {/* 2. Discount Percentage with quick buttons */}
+                <div>
+                  <label className="block text-xs font-bold text-primary-text mb-1.5 flex items-center justify-between">
+                    <span>نسبة الخصم (%)</span>
+                    <span className="text-[11px] text-emerald-700 font-bold font-tabular">
+                      {discountPercentage ? `${discountPercentage}%` : "0%"}
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={discountPercentage !== undefined && discountPercentage !== null ? String(discountPercentage) : ""}
+                    onChange={(e) => handleDiscountPercentageChange(Number(e.target.value))}
+                    placeholder="مثال: 10"
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-neutral-border rounded-xl font-tabular focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {/* Quick percentage pills */}
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {[5, 10, 15, 20, 25, 30].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => handleDiscountPercentageChange(pct)}
+                        className={cn(
+                          "px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all cursor-pointer font-tabular",
+                          Number(discountPercentage) === pct
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                            : "bg-white text-secondary-text hover:text-primary-text hover:bg-zinc-50 border-neutral-border"
+                        )}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Final Price after discount */}
+                <div>
+                  <label className="block text-xs font-bold text-primary-text mb-1.5 flex items-center justify-between">
+                    <span>السعر النهائي بعد الخصم ({currency}) <span className="text-rose-500">*</span></span>
+                    <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
+                      السعر المعروض
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    value={price !== undefined && price !== null ? String(price) : ""}
+                    onChange={(e) => handleFinalPriceChange(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border-2 border-emerald-400 rounded-xl font-tabular font-bold text-emerald-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                  />
+                  {errors.price && (
+                    <p className="text-xs text-rose-500 mt-1">{errors.price.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Preview Card */}
+              {Boolean(originalPrice && price && Number(originalPrice) > Number(price)) && (
+                <div className="p-3.5 rounded-xl bg-white border border-emerald-200 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 rounded-lg bg-rose-50 text-rose-600">
+                      <TrendingDown className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm sm:text-base font-extrabold text-emerald-700 font-tabular">
+                          {Number(price).toLocaleString()} {currency}
+                        </span>
+                        <span className="text-xs text-zinc-400 line-through font-tabular">
+                          {Number(originalPrice).toLocaleString()} {currency}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500 text-white text-[11px] font-bold shadow-2xs">
+                          خصم {discountPercentage || Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100)}%
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 mt-0.5 font-medium">
+                        قيمة التوفير المباشر للعميل: <strong>{(Number(originalPrice) - Number(price)).toLocaleString()} {currency}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-[11px] text-secondary-text font-normal">
+                    * هذا الشكل المعتمد الذي سيظهر في بطاقة العقار وتفاصيل العرض
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

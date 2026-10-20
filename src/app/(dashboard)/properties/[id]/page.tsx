@@ -190,9 +190,32 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           <div className="p-6 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right space-y-5">
             <div>
               <span className="text-xs font-medium text-secondary-text">القيمة الإجمالية</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-primary-text font-tabular mt-1">
-                {formatCurrency(property.price, property.currency)}
-              </div>
+              {property.originalPrice && property.originalPrice > property.price ? (
+                <div className="mt-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-tabular">
+                      {formatCurrency(property.price, property.currency)}
+                    </span>
+                    {property.discountPercentage && (
+                      <span className="px-2.5 py-0.5 rounded-lg bg-rose-500 text-white text-xs font-bold shadow-xs">
+                        خصم {property.discountPercentage}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-zinc-400 line-through font-tabular">
+                      {formatCurrency(property.originalPrice, property.currency)}
+                    </span>
+                    <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      وفرت {formatCurrency(property.originalPrice - property.price, property.currency)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-2xl sm:text-3xl font-extrabold text-primary-text font-tabular mt-1">
+                  {formatCurrency(property.price, property.currency)}
+                </div>
+              )}
               {property.maintenanceFee ? (
                 <p className="text-xs text-secondary-text mt-1">
                   وديعة الصيانة: {formatCurrency(property.maintenanceFee)}
