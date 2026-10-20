@@ -29,8 +29,15 @@ export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(MockStore.isSyncing());
 
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return MockStore.subscribe(() => {
+      setIsSyncing(MockStore.isSyncing());
+    });
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,10 +69,14 @@ export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
     <>
       <header
         className={cn(
-          "sticky top-0 z-20 h-16 bg-surface/95 backdrop-blur-md border-b border-neutral-border px-4 sm:px-6 flex items-center justify-between gap-4 transition-all duration-200",
+          "sticky top-0 z-20 h-16 bg-surface/95 backdrop-blur-md border-b border-neutral-border px-4 sm:px-6 flex items-center justify-between gap-4 transition-all duration-200 relative",
           isScrolled ? "shadow-sm shadow-black/5" : ""
         )}
       >
+        {/* Modern micro top progress line during live sync */}
+        {isSyncing && (
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-gold to-transparent animate-pulse" />
+        )}
         {/* Right side: Mobile Menu Trigger & Mobile Logo */}
         <div className="flex items-center gap-2.5">
           <button
