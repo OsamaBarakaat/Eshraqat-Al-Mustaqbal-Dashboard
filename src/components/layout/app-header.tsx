@@ -14,6 +14,7 @@ import { ConfirmDialog } from "../shared/confirm-dialog";
 import { useToast } from "../shared/toast-provider";
 import { BrandLogo } from "../shared/brand-logo";
 import { usePermissions } from "@/lib/hooks/use-permissions";
+import { MockStore } from "@/lib/services/mock-store";
 
 interface AppHeaderProps {
   onOpenMobileMenu: () => void;
@@ -42,7 +43,8 @@ export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
 
   const handleLogout = () => {
     setLogoutDialogOpen(false);
-    success("تم تسجيل الخروج بنجاح", "تم إنهاء الجلسة التجريبية والعودة لصفحة الدخول.");
+    MockStore.logout();
+    success("تم تسجيل الخروج بنجاح", "تم إنهاء الجلسة والعودة لصفحة الدخول.");
     router.push("/login");
   };
 

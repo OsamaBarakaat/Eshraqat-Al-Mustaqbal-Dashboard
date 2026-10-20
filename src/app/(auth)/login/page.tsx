@@ -2,19 +2,20 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Eye, EyeOff, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { MockStore } from "@/lib/services/mock-store";
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("osama@eshraqat-realestate.com");
+  const [email, setEmail] = useState("admin@eshraqat.sa");
   const [password, setPassword] = useState("Eshraqat@2026");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -24,11 +25,14 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    // Safe prototype login simulation
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await MockStore.login(email.trim(), password);
       router.push("/dashboard");
-    }, 600);
+    } catch (err: any) {
+      setError(err?.message || "فشل تسجيل الدخول. تحقق من صحة البريد الإلكتروني وكلمة المرور.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,7 +73,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@eshraqat-realestate.com"
+                  placeholder="admin@eshraqat.sa"
                   className="w-full pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl dir-ltr focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold transition-colors font-mono"
                   required
                 />
@@ -105,24 +109,24 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-4 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover shadow-md shadow-brand-gold/20 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl bg-brand-gold hover:bg-brand-gold/90 text-primary-text font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed mt-2"
             >
-              <span>{isLoading ? "جارٍ التحقق..." : "دخول لوحة التحكم"}</span>
-              <ArrowLeft className="w-4 h-4" />
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-primary-text border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>دخول المنصة</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         </div>
 
-        {/* Security architecture footer note */}
-        <div className="text-center text-xs text-secondary-text space-y-1">
-          <p className="flex items-center justify-center gap-1.5 text-zinc-500 text-[11px]">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-gold-deep" />
-            <span>سيتم تفعيل المصادقة الإنتاجية المشفرة عبر Supabase Auth في المرحلة التالية.</span>
-          </p>
-          <p className="text-[10px] text-muted-text">
-            جميع الحقوق محفوظة © {new Date().getFullYear()} إشراقة المستقبل للعقارات
-          </p>
-        </div>
+        {/* Footer info */}
+        <p className="text-center text-[11px] text-secondary-text">
+          منصة إشراقة المستقبل للعقارات © 2026 — نحو غدٍ مشرق
+        </p>
       </div>
     </div>
   );

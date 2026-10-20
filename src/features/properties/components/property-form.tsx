@@ -21,12 +21,14 @@ import {
   Layers,
   Tag,
   TrendingDown,
+  Loader2,
 } from "lucide-react";
 import { propertyFormSchema, PropertyFormValues } from "../schemas/property-schema";
 import { Property, PropertyCategory, PropertyStatus, PropertyImage } from "@/types/property";
 import { Province, District } from "@/types/location";
 import { AMENITIES_LIST } from "@/lib/constants";
 import { MockStore } from "@/lib/services/mock-store";
+import { apiClient } from "@/lib/services/api-client";
 import { useToast } from "@/components/shared/toast-provider";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +83,8 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
 
   // Default / initial values
   const defaultValues: Partial<PropertyFormValues> = {
@@ -198,8 +202,8 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     setValue("amenities", current);
   };
 
-  // Primary Cover image file upload from device
-  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Primary Cover image file upload from device with live cloud upload
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -208,23 +212,38 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toastError("حجم الملف كبير", "الحد الأقصى المسموح به لحجم صورة الغلاف هو 5 ميجابايت.");
+    if (file.size > 10 * 1024 * 1024) {
+      toastError("حجم الملف كبير", "الحد الأقصى المسموح به لحجم صورة الغلاف هو 10 ميجابايت.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setValue("primaryImageUrl", result, { shouldValidate: true });
-      success("تم اختيار صورة الغلاف", "تم تحميل صورة الغلاف بنجاح من جهازك.");
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    setIsUploadingCover(true);
+    // Instant local preview
+    const localPreview = URL.createObjectURL(file);
+    setValue("primaryImageUrl", localPreview, { shouldValidate: true });
+
+    try {
+      const res = await apiClient.uploadFile(file, "properties");
+      if (res?.url) {
+        setValue("primaryImageUrl", res.url, { shouldValidate: true });
+        success("تم رفع صورة الغلاف بنجاح", "تم حفظ صورة الغلاف في التخزين السحابي.");
+      }
+    } catch (err: any) {
+      console.warn("Media upload to backend failed, falling back to local data URL:", err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setValue("primaryImageUrl", reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+      success("تم اختيار صورة الغلاف", "تم اعتماد صورة الغلاف محلياً.");
+    } finally {
+      setIsUploadingCover(false);
+      e.target.value = "";
+    }
   };
 
-  // Gallery multi-images upload from device
-  const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Gallery multi-images upload from device with live cloud upload
+  const handleGalleryFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -233,7 +252,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
     Array.from(files).forEach((file) => {
       if (!file.type.startsWith("image/")) return;
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 10 * 1024 * 1024) {
         oversizedCount++;
         return;
       }
@@ -241,36 +260,54 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     });
 
     if (oversizedCount > 0) {
-      toastError("تنبيه الحجم", `تم استبعاد ${oversizedCount} صور لتجاوزها حجم 5 ميجابايت.`);
+      toastError("تنبيه الحجم", `تم استبعاد ${oversizedCount} صور لتجاوزها حجم 10 ميجابايت.`);
     }
 
     if (validFiles.length === 0) return;
 
-    let loadedCount = 0;
-    const newImages: PropertyImage[] = [];
+    setIsUploadingGallery(true);
+    const tempIds = validFiles.map((_, i) => `temp-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 5)}`);
 
-    validFiles.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-        newImages.push({
-          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 6)}`,
-          url: result,
-          caption: cleanName || "صورة من العقار",
-          isPrimary: false,
-        });
+    // Add local preview images immediately
+    const previewImages: PropertyImage[] = validFiles.map((file, i) => ({
+      id: tempIds[i],
+      url: URL.createObjectURL(file),
+      caption: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") || "صورة من العقار",
+      isPrimary: false,
+    }));
+    setGalleryImages((prev) => [...prev, ...previewImages]);
 
-        loadedCount++;
-        if (loadedCount === validFiles.length) {
-          setGalleryImages((prev) => [...prev, ...newImages]);
-          success("تم تحميل الصور بنجاح", `تمت إضافة ${newImages.length} صور إلى المعرض.`);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    e.target.value = "";
+    try {
+      const uploadRes = await apiClient.uploadMultipleFiles(validFiles, "properties");
+      if (uploadRes && Array.isArray(uploadRes) && uploadRes.length > 0) {
+        setGalleryImages((prev) =>
+          prev.map((img) => {
+            const idx = tempIds.indexOf(img.id);
+            if (idx !== -1 && uploadRes[idx]?.url) {
+              return { ...img, id: `img-${Date.now()}-${idx}`, url: uploadRes[idx].url };
+            }
+            return img;
+          })
+        );
+        success("تم رفع الصور بنجاح", `تم رفع ${uploadRes.length} صور إلى التخزين السحابي.`);
+      }
+    } catch (err: any) {
+      console.warn("Gallery upload to backend failed, falling back to local data URLs:", err);
+      validFiles.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = reader.result as string;
+          setGalleryImages((prev) =>
+            prev.map((img) => (img.id === tempIds[index] ? { ...img, url: res } : img))
+          );
+        };
+        reader.readAsDataURL(file);
+      });
+      success("تمت إضافة الصور", `تمت إضافة ${validFiles.length} صور إلى المعرض.`);
+    } finally {
+      setIsUploadingGallery(false);
+      e.target.value = "";
+    }
   };
 
   const removeGalleryImage = (id: string) => {
@@ -1165,11 +1202,16 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    disabled={isUploadingCover}
                     onClick={() => coverFileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-brand-charcoal bg-white/95 hover:bg-white rounded-xl shadow-xs transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-brand-charcoal bg-white/95 hover:bg-white disabled:opacity-50 rounded-xl shadow-xs transition-all cursor-pointer"
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>تغيير صورة الغلاف من جهازك</span>
+                    {isUploadingCover ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isUploadingCover ? "جاري الرفع..." : "تغيير صورة الغلاف من جهازك"}</span>
                   </button>
                   <button
                     type="button"
@@ -1193,22 +1235,32 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
               )}
             >
               <div className="p-3.5 rounded-2xl bg-amber-50 text-amber-700">
-                <UploadCloud className="w-8 h-8" />
+                {isUploadingCover ? (
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                ) : (
+                  <UploadCloud className="w-8 h-8" />
+                )}
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-bold text-primary-text">
-                  انقر هنا لاختيار صورة الغلاف الرئيسية من جهازك
+                  {isUploadingCover
+                    ? "جاري رفع صورة الغلاف إلى السحابة..."
+                    : "انقر هنا لاختيار صورة الغلاف الرئيسية من جهازك"}
                 </p>
                 <p className="text-xs text-secondary-text">
-                  صيغ مدعومة: JPG، PNG، WebP (الحد الأقصى الموصى به 5 ميجابايت)
+                  صيغ مدعومة: JPG، PNG، WebP (حتى 10 ميجابايت)
                 </p>
               </div>
               <button
                 type="button"
                 className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs cursor-pointer pointer-events-none"
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>استعراض جهازك واختيار الغلاف</span>
+                {isUploadingCover ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                <span>{isUploadingCover ? "جاري الرفع..." : "استعراض جهازك واختيار الغلاف"}</span>
               </button>
             </div>
           )}
@@ -1236,11 +1288,16 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
             <button
               type="button"
+              disabled={isUploadingGallery}
               onClick={() => galleryFileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover disabled:opacity-50 rounded-xl shadow-xs transition-all cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>إضافة صور متعددة من جهازك</span>
+              {isUploadingGallery ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              <span>{isUploadingGallery ? "جاري الرفع..." : "إضافة صور متعددة من جهازك"}</span>
             </button>
           </div>
 
