@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   MailCheck,
@@ -26,16 +26,21 @@ import { useToast } from "@/components/shared/toast-provider";
 import { INQUIRY_STATUS_CONFIG, INQUIRY_TYPE_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
 import { Inquiry, InquiryStatus } from "@/types/inquiry";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 const PAGE_SIZE = 5;
 
 export default function InquiriesPage() {
   const { success } = useToast();
-  const [inquiries, setInquiries] = useState<Inquiry[]>(MockStore.getInquiries());
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [isLoading, setIsLoading] = useState(MockStore.isLoading());
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [totalInquiries, setTotalInquiries] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Search & Filters
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 350);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
 
@@ -49,7 +54,6 @@ export default function InquiriesPage() {
   useEffect(() => {
     setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
-      setInquiries(MockStore.getInquiries());
       setIsLoading(MockStore.isLoading());
       if (selectedInquiry) {
         const found = MockStore.getInquiries().find((i) => i.id === selectedInquiry.id);
@@ -62,37 +66,43 @@ export default function InquiriesPage() {
   // Reset page on filter or search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, typeFilter]);
+  }, [debouncedSearch, statusFilter, typeFilter]);
 
-  // Filter inquiries
-  const filteredInquiries = useMemo(() => {
-    return inquiries.filter((inq) => {
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const matchName = inq.senderName.toLowerCase().includes(q);
-        const matchPhone = inq.senderPhone.includes(q);
-        const matchSubject = inq.subject.toLowerCase().includes(q);
-        const matchMsg = inq.message.toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchSubject && !matchMsg) return false;
-      }
-      if (statusFilter !== "ALL" && inq.status !== statusFilter) return false;
-      if (typeFilter !== "ALL" && inq.type !== typeFilter) return false;
-      return true;
-    });
-  }, [inquiries, search, statusFilter, typeFilter]);
+  // Execute Backend API Query on search / filter / page change
+  useEffect(() => {
+    let cancelled = false;
+    setIsTableLoading(true);
 
-  // Pagination calculation
-  const totalPages = Math.max(1, Math.ceil(filteredInquiries.length / PAGE_SIZE));
-  const paginatedInquiries = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredInquiries.slice(start, start + PAGE_SIZE);
-  }, [filteredInquiries, currentPage]);
+    MockStore.queryInquiries({
+      search: debouncedSearch,
+      status: statusFilter,
+      type: typeFilter,
+      page: currentPage,
+      limit: PAGE_SIZE,
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setInquiries(res.items);
+          setTotalInquiries(res.total);
+          setTotalPages(res.totalPages);
+          setIsTableLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsTableLoading(false);
+      });
 
-  // Statistics
-  const totalCount = inquiries.length;
-  const newCount = inquiries.filter((i) => i.status === "NEW").length;
-  const inProgressCount = inquiries.filter((i) => i.status === "IN_PROGRESS").length;
-  const repliedCount = inquiries.filter((i) => i.status === "REPLIED").length;
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, statusFilter, typeFilter, currentPage]);
+
+  // Statistics from central store
+  const allInquiries = MockStore.getInquiries();
+  const totalCount = allInquiries.length;
+  const newCount = allInquiries.filter((i) => i.status === "NEW").length;
+  const inProgressCount = allInquiries.filter((i) => i.status === "IN_PROGRESS").length;
+  const repliedCount = allInquiries.filter((i) => i.status === "REPLIED").length;
 
   const handleUpdateStatus = (inq: Inquiry, newStatus: InquiryStatus, note?: string) => {
     MockStore.updateInquiryStatus(inq.id, newStatus, note);
@@ -162,7 +172,7 @@ export default function InquiriesPage() {
           setStatusFilter("ALL");
           setTypeFilter("ALL");
         }}
-        totalResults={filteredInquiries.length}
+        totalResults={totalInquiries}
         filters={[
           {
             id: "status",
@@ -192,11 +202,11 @@ export default function InquiriesPage() {
       />
 
       {/* Inquiries Table */}
-      {isLoading ? (
-        <TableSkeleton rows={5} columns={7} message="جاري جلب استفسارات ورسائل الموقع..." />
+      {isTableLoading || isLoading ? (
+        <TableSkeleton rows={PAGE_SIZE} columns={7} message="جاري جلب استفسارات ورسائل الموقع..." />
       ) : (
         <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-          {filteredInquiries.length > 0 ? (
+          {inquiries.length > 0 ? (
             <>
               <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm">
@@ -212,7 +222,7 @@ export default function InquiriesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-border-subtle">
-                  {paginatedInquiries.map((inq) => {
+                  {inquiries.map((inq) => {
                     const statusCfg = INQUIRY_STATUS_CONFIG[inq.status];
                     return (
                       <tr
@@ -319,11 +329,11 @@ export default function InquiriesPage() {
                 </span>{" "}
                 إلى{" "}
                 <span className="font-bold text-primary-text font-tabular">
-                  {Math.min(currentPage * PAGE_SIZE, filteredInquiries.length)}
+                  {Math.min(currentPage * PAGE_SIZE, totalInquiries)}
                 </span>{" "}
                 من أصل{" "}
                 <span className="font-bold text-primary-text font-tabular">
-                  {filteredInquiries.length}
+                  {totalInquiries}
                 </span>{" "}
                 استفسار
               </div>

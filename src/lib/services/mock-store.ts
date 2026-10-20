@@ -550,6 +550,58 @@ export const MockStore = {
     return [...propertiesState];
   },
 
+  async queryProperties(query: {
+    search?: string;
+    category?: string;
+    purpose?: string;
+    status?: string;
+    hasDiscount?: boolean;
+    provinceId?: string;
+    cityId?: string;
+    districtId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Property[]; total: number; totalPages: number }> {
+    const params: Record<string, any> = {
+      page: query.page || 1,
+      limit: query.limit || 5,
+    };
+    if (query.search?.trim()) params.search = query.search.trim();
+    if (query.category && query.category !== "ALL") params.category = query.category;
+    if (query.purpose && query.purpose !== "ALL") params.purpose = query.purpose;
+    if (query.status && query.status !== "ALL") params.status = query.status;
+    if (query.hasDiscount) params.hasDiscount = true;
+    if (query.provinceId && query.provinceId !== "ALL") params.provinceId = query.provinceId;
+    if (query.cityId && query.cityId !== "ALL") params.cityId = query.cityId;
+    if (query.districtId && query.districtId !== "ALL") params.districtId = query.districtId;
+
+    try {
+      const res = await apiClient.get<any>("/properties", params);
+      const rawItems = res?.items || [];
+      const total = res?.meta?.total ?? rawItems.length;
+      const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+      return {
+        items: rawItems.map(mapBackendPropertyToDashboard),
+        total,
+        totalPages,
+      };
+    } catch {
+      try {
+        const pubRes = await apiClient.get<any>("/properties/public", params);
+        const rawItems = pubRes?.items || [];
+        const total = pubRes?.meta?.total ?? rawItems.length;
+        const totalPages = pubRes?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+        return {
+          items: rawItems.map(mapBackendPropertyToDashboard),
+          total,
+          totalPages,
+        };
+      } catch {
+        return { items: [], total: 0, totalPages: 1 };
+      }
+    }
+  },
+
   getPropertyById(id: string): Property | undefined {
     return propertiesState.find((p) => p.id === id || p.code === id);
   },
@@ -659,6 +711,38 @@ export const MockStore = {
     return [...appointmentsState];
   },
 
+  async queryAppointments(query: {
+    search?: string;
+    status?: string;
+    assignedEmployeeId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Appointment[]; total: number; totalPages: number }> {
+    const params: Record<string, any> = {
+      page: query.page || 1,
+      limit: query.limit || 5,
+    };
+    if (query.search?.trim()) params.search = query.search.trim();
+    if (query.status && query.status !== "ALL") params.status = query.status;
+    if (query.assignedEmployeeId && query.assignedEmployeeId !== "ALL") {
+      params.assignedEmployeeId = query.assignedEmployeeId;
+    }
+
+    try {
+      const res = await apiClient.get<any>("/appointments", params);
+      const rawItems = res?.items || [];
+      const total = res?.meta?.total ?? rawItems.length;
+      const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+      return {
+        items: rawItems,
+        total,
+        totalPages,
+      };
+    } catch {
+      return { items: [], total: 0, totalPages: 1 };
+    }
+  },
+
   getAppointmentById(id: string): Appointment | undefined {
     return appointmentsState.find((a) => a.id === id);
   },
@@ -727,6 +811,36 @@ export const MockStore = {
     return [...clientsState];
   },
 
+  async queryClients(query: {
+    search?: string;
+    status?: string;
+    source?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Client[]; total: number; totalPages: number }> {
+    const params: Record<string, any> = {
+      page: query.page || 1,
+      limit: query.limit || 5,
+    };
+    if (query.search?.trim()) params.search = query.search.trim();
+    if (query.status && query.status !== "ALL") params.status = query.status;
+    if (query.source && query.source !== "ALL") params.source = query.source;
+
+    try {
+      const res = await apiClient.get<any>("/clients", params);
+      const rawItems = res?.items || [];
+      const total = res?.meta?.total ?? rawItems.length;
+      const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+      return {
+        items: rawItems,
+        total,
+        totalPages,
+      };
+    } catch {
+      return { items: [], total: 0, totalPages: 1 };
+    }
+  },
+
   getClientById(id: string): Client | undefined {
     return clientsState.find((c) => c.id === id);
   },
@@ -791,6 +905,36 @@ export const MockStore = {
   // ------------------------------------------
   getInquiries(): Inquiry[] {
     return [...inquiriesState];
+  },
+
+  async queryInquiries(query: {
+    search?: string;
+    status?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Inquiry[]; total: number; totalPages: number }> {
+    const params: Record<string, any> = {
+      page: query.page || 1,
+      limit: query.limit || 5,
+    };
+    if (query.search?.trim()) params.search = query.search.trim();
+    if (query.status && query.status !== "ALL") params.status = query.status;
+    if (query.type && query.type !== "ALL") params.type = query.type;
+
+    try {
+      const res = await apiClient.get<any>("/inquiries", params);
+      const rawItems = res?.items || [];
+      const total = res?.meta?.total ?? rawItems.length;
+      const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+      return {
+        items: rawItems,
+        total,
+        totalPages,
+      };
+    } catch {
+      return { items: [], total: 0, totalPages: 1 };
+    }
   },
 
   updateInquiryStatus(id: string, status: InquiryStatus, replyNotes?: string): Inquiry | null {

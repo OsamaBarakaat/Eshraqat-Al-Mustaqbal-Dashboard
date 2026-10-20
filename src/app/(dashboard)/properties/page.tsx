@@ -34,15 +34,20 @@ import {
 } from "@/lib/constants";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { Property, PropertyStatus } from "@/types/property";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 export default function PropertiesListPage() {
   const { success, error: toastError, info } = useToast();
-  const [properties, setProperties] = useState<Property[]>(MockStore.getProperties());
+  const [properties, setProperties] = useState<Property[]>([]);
   const [provinces, setProvinces] = useState(MockStore.getLocations());
   const [isLoading, setIsLoading] = useState(MockStore.isLoading());
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [totalProperties, setTotalProperties] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Search and filter states
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 350);
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [purposeFilter, setPurposeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -60,12 +65,68 @@ export default function PropertiesListPage() {
   useEffect(() => {
     setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
-      setProperties(MockStore.getProperties());
       setProvinces(MockStore.getLocations());
       setIsLoading(MockStore.isLoading());
     });
     return unsubscribe;
   }, []);
+
+  // Reset page when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, categoryFilter, purposeFilter, statusFilter, cityFilter, districtFilter, discountFilter]);
+
+  // Execute Backend API Query on search / filter / page change
+  useEffect(() => {
+    let cancelled = false;
+    setIsTableLoading(true);
+
+    let selectedCityId: string | undefined;
+    let selectedDistrictId: string | undefined;
+
+    if (cityFilter !== "ALL") {
+      for (const p of provinces) {
+        const c = p.cities.find((city) => city.nameArabic === cityFilter || city.nameEnglish === cityFilter);
+        if (c) {
+          selectedCityId = c.id;
+          if (districtFilter !== "ALL") {
+            const d = c.districts.find((dist) => dist.nameArabic === districtFilter || dist.nameEnglish === districtFilter);
+            if (d) selectedDistrictId = d.id;
+          }
+          break;
+        }
+      }
+    }
+
+    MockStore.queryProperties({
+      search: debouncedSearch,
+      category: categoryFilter,
+      purpose: purposeFilter,
+      status: statusFilter,
+      hasDiscount: discountFilter,
+      cityId: selectedCityId,
+      districtId: selectedDistrictId,
+      page: currentPage,
+      limit: pageSize,
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setProperties(res.items);
+          setTotalProperties(res.total);
+          setTotalPages(res.totalPages);
+          setIsTableLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsTableLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, categoryFilter, purposeFilter, statusFilter, cityFilter, districtFilter, discountFilter, currentPage, provinces]);
 
   // Compute available cities from Saudi locations
   const availableCities = useMemo(() => {
@@ -90,47 +151,14 @@ export default function PropertiesListPage() {
     return [];
   }, [provinces, cityFilter]);
 
-  // Filter properties
-  const filteredProperties = useMemo(() => {
-    return properties.filter((prop) => {
-      // Search
-      if (search.trim()) {
-        const query = search.toLowerCase();
-        const matchTitle = prop.title.toLowerCase().includes(query);
-        const matchCode = prop.code.toLowerCase().includes(query);
-        const matchArea = prop.location.area.toLowerCase().includes(query);
-        if (!matchTitle && !matchCode && !matchArea) return false;
-      }
-      // Category
-      if (categoryFilter !== "ALL" && prop.category !== categoryFilter) return false;
-      // Purpose
-      if (purposeFilter !== "ALL" && prop.purpose !== purposeFilter) return false;
-      // Status
-      if (statusFilter !== "ALL" && prop.status !== statusFilter) return false;
-      // City
-      if (cityFilter !== "ALL" && prop.location.city !== cityFilter) return false;
-      // District / Area
-      if (districtFilter !== "ALL" && prop.location.area !== districtFilter) return false;
-      // Discount filter
-      if (discountFilter && !(prop.originalPrice && prop.originalPrice > prop.price)) return false;
-
-      return true;
-    });
-  }, [properties, search, categoryFilter, purposeFilter, statusFilter, cityFilter, districtFilter, discountFilter]);
-
-  // Paginated records
-  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / pageSize));
-  const paginatedProperties = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredProperties.slice(start, start + pageSize);
-  }, [filteredProperties, currentPage, pageSize]);
-
-  // Statistics
-  const totalCount = properties.length;
-  const publishedCount = properties.filter((p) => p.status === "PUBLISHED").length;
-  const draftCount = properties.filter((p) => p.status === "DRAFT").length;
-  const soldOrRentedCount = properties.filter((p) => p.status === "SOLD" || p.status === "RENTED").length;
-  const discountedCount = properties.filter((p) => p.originalPrice && p.originalPrice > p.price).length;
+  // Overall KPI Statistics from centralized store
+  const stats = MockStore.getDashboardStats();
+  const allProperties = MockStore.getProperties();
+  const totalCount = stats.totalProperties;
+  const publishedCount = stats.publishedProperties;
+  const draftCount = stats.draftProperties;
+  const soldOrRentedCount = stats.archivedProperties;
+  const discountedCount = allProperties.filter((p) => p.originalPrice && p.originalPrice > p.price).length;
 
   // Actions
   const handleTogglePublish = (prop: Property) => {
@@ -274,7 +302,7 @@ export default function PropertiesListPage() {
             </button>
 
             <span className="text-xs text-secondary-text">
-              النتائج: <strong className="text-primary-text font-tabular">{filteredProperties.length}</strong>
+              النتائج: <strong className="text-primary-text font-tabular">{totalProperties}</strong>
             </span>
 
             {isFiltered && (
@@ -377,11 +405,11 @@ export default function PropertiesListPage() {
       </div>
 
       {/* Properties Table Card */}
-      {isLoading ? (
-        <TableSkeleton rows={5} columns={9} message="جاري جلب قائمة العقارات الحية من قاعدة البيانات..." />
+      {isTableLoading || isLoading ? (
+        <TableSkeleton rows={pageSize} columns={9} message="جاري جلب قائمة العقارات الحية من قاعدة البيانات..." />
       ) : (
       <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-        {paginatedProperties.length > 0 ? (
+        {properties.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-right text-xs sm:text-sm">
               <thead className="bg-zinc-50 border-b border-neutral-border text-secondary-text font-semibold select-none">
@@ -398,7 +426,7 @@ export default function PropertiesListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-border-subtle">
-                {paginatedProperties.map((prop) => {
+                {properties.map((prop) => {
                   const statusCfg = PROPERTY_STATUS_CONFIG[prop.status];
                   return (
                     <tr
@@ -570,12 +598,12 @@ export default function PropertiesListPage() {
         )}
 
         {/* Pagination bar */}
-        {filteredProperties.length > 0 && (
+        {totalProperties > 0 && (
           <div className="p-4 border-t border-neutral-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-secondary-text">
             <span>
-              عرض الصفحة <strong className="text-primary-text">{currentPage}</strong> من أصل{" "}
-              <strong className="text-primary-text">{totalPages}</strong> (إجمالي{" "}
-              <strong className="text-primary-text">{filteredProperties.length}</strong> عقار)
+              عرض الصفحة <strong className="text-primary-text font-tabular">{currentPage}</strong> من أصل{" "}
+              <strong className="text-primary-text font-tabular">{totalPages}</strong> (إجمالي{" "}
+              <strong className="text-primary-text font-tabular">{totalProperties}</strong> عقار)
             </span>
 
             <div className="flex items-center gap-1.5">

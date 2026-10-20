@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users2,
   Phone,
@@ -24,16 +24,21 @@ import { useToast } from "@/components/shared/toast-provider";
 import { LEAD_STATUS_CONFIG, LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { Client, LeadStatus } from "@/types/client";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 const PAGE_SIZE = 5;
 
 export default function ClientsPage() {
   const { success } = useToast();
-  const [clients, setClients] = useState<Client[]>(MockStore.getClients());
+  const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(MockStore.isLoading());
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [totalClients, setTotalClients] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Search & Filters
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 350);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
 
@@ -47,7 +52,6 @@ export default function ClientsPage() {
   useEffect(() => {
     setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
-      setClients(MockStore.getClients());
       setIsLoading(MockStore.isLoading());
       if (selectedClient) {
         const updated = MockStore.getClientById(selectedClient.id);
@@ -60,36 +64,43 @@ export default function ClientsPage() {
   // Reset page when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, sourceFilter]);
+  }, [debouncedSearch, statusFilter, sourceFilter]);
 
-  // Filter clients
-  const filteredClients = useMemo(() => {
-    return clients.filter((cli) => {
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const matchName = cli.name.toLowerCase().includes(q);
-        const matchPhone = cli.phone.includes(q);
-        const matchProp = cli.interestedPropertyTitle?.toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchProp) return false;
-      }
-      if (statusFilter !== "ALL" && cli.status !== statusFilter) return false;
-      if (sourceFilter !== "ALL" && cli.source !== sourceFilter) return false;
-      return true;
-    });
-  }, [clients, search, statusFilter, sourceFilter]);
+  // Execute Backend API Query on search / filter / page change
+  useEffect(() => {
+    let cancelled = false;
+    setIsTableLoading(true);
 
-  // Pagination calculation
-  const totalPages = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE));
-  const paginatedClients = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredClients.slice(start, start + PAGE_SIZE);
-  }, [filteredClients, currentPage]);
+    MockStore.queryClients({
+      search: debouncedSearch,
+      status: statusFilter,
+      source: sourceFilter,
+      page: currentPage,
+      limit: PAGE_SIZE,
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setClients(res.items);
+          setTotalClients(res.total);
+          setTotalPages(res.totalPages);
+          setIsTableLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsTableLoading(false);
+      });
 
-  // Statistics
-  const totalCount = clients.length;
-  const newCount = clients.filter((c) => c.status === "NEW").length;
-  const qualifiedCount = clients.filter((c) => c.status === "QUALIFIED").length;
-  const convertedCount = clients.filter((c) => c.status === "CONVERTED").length;
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, statusFilter, sourceFilter, currentPage]);
+
+  // Statistics from central store
+  const allClients = MockStore.getClients();
+  const totalCount = allClients.length;
+  const newCount = allClients.filter((c) => c.status === "NEW").length;
+  const qualifiedCount = allClients.filter((c) => c.status === "QUALIFIED").length;
+  const convertedCount = allClients.filter((c) => c.status === "CONVERTED").length;
 
   const handleStatusChange = (client: Client, newStatus: LeadStatus) => {
     MockStore.updateClientStatus(client.id, newStatus);
@@ -159,7 +170,7 @@ export default function ClientsPage() {
           setStatusFilter("ALL");
           setSourceFilter("ALL");
         }}
-        totalResults={filteredClients.length}
+        totalResults={totalClients}
         filters={[
           {
             id: "status",
@@ -190,11 +201,11 @@ export default function ClientsPage() {
       />
 
       {/* Clients Table */}
-      {isLoading ? (
-        <TableSkeleton rows={5} columns={8} message="جاري جلب بيانات العملاء المحتملين..." />
+      {isTableLoading || isLoading ? (
+        <TableSkeleton rows={PAGE_SIZE} columns={8} message="جاري جلب بيانات العملاء المحتملين..." />
       ) : (
         <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-          {filteredClients.length > 0 ? (
+          {clients.length > 0 ? (
             <>
               <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm">
@@ -211,7 +222,7 @@ export default function ClientsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-border-subtle">
-                  {paginatedClients.map((client) => {
+                  {clients.map((client) => {
                     return (
                       <tr key={client.id} className="hover:bg-zinc-50/70 transition-colors">
                         {/* Name */}
@@ -329,11 +340,11 @@ export default function ClientsPage() {
                 </span>{" "}
                 إلى{" "}
                 <span className="font-bold text-primary-text font-tabular">
-                  {Math.min(currentPage * PAGE_SIZE, filteredClients.length)}
+                  {Math.min(currentPage * PAGE_SIZE, totalClients)}
                 </span>{" "}
                 من أصل{" "}
                 <span className="font-bold text-primary-text font-tabular">
-                  {filteredClients.length}
+                  {totalClients}
                 </span>{" "}
                 عميل
               </div>

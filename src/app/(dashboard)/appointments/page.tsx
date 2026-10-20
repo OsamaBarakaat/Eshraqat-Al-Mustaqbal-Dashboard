@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -28,6 +28,7 @@ import { APPOINTMENT_STATUS_CONFIG } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { Appointment } from "@/types/appointment";
 import { AdminUser } from "@/types/team";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 const PAGE_SIZE = 5;
 
@@ -44,12 +45,16 @@ function formatTo12Hour(timeStr: string) {
 
 export default function AppointmentsPage() {
   const { success, warning, info } = useToast();
-  const [appointments, setAppointments] = useState<Appointment[]>(MockStore.getAppointments());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [employees, setEmployees] = useState<AdminUser[]>(MockStore.getUsers());
   const [isLoading, setIsLoading] = useState(MockStore.isLoading());
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [totalAppointments, setTotalAppointments] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Search & Filters
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 350);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [employeeFilter, setEmployeeFilter] = useState("ALL");
 
@@ -67,7 +72,6 @@ export default function AppointmentsPage() {
   useEffect(() => {
     setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
-      setAppointments(MockStore.getAppointments());
       setEmployees(MockStore.getUsers());
       setIsLoading(MockStore.isLoading());
     });
@@ -77,38 +81,43 @@ export default function AppointmentsPage() {
   // Reset page when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, employeeFilter]);
+  }, [debouncedSearch, statusFilter, employeeFilter]);
 
-  // Filter logic
-  const filteredAppointments = useMemo(() => {
-    return appointments.filter((appt) => {
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const matchName = appt.customerName.toLowerCase().includes(q);
-        const matchPhone = appt.customerPhone.includes(q);
-        const matchProp = appt.propertyTitle.toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchProp) return false;
-      }
+  // Execute Backend API Query on search / filter / page change
+  useEffect(() => {
+    let cancelled = false;
+    setIsTableLoading(true);
 
-      if (statusFilter !== "ALL" && appt.status !== statusFilter) return false;
-      if (employeeFilter !== "ALL" && appt.assignedEmployeeId !== employeeFilter) return false;
+    MockStore.queryAppointments({
+      search: debouncedSearch,
+      status: statusFilter,
+      assignedEmployeeId: employeeFilter,
+      page: currentPage,
+      limit: PAGE_SIZE,
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setAppointments(res.items);
+          setTotalAppointments(res.total);
+          setTotalPages(res.totalPages);
+          setIsTableLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsTableLoading(false);
+      });
 
-      return true;
-    });
-  }, [appointments, search, statusFilter, employeeFilter]);
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, statusFilter, employeeFilter, currentPage]);
 
-  // Pagination calculation
-  const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / PAGE_SIZE));
-  const paginatedAppointments = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredAppointments.slice(start, start + PAGE_SIZE);
-  }, [filteredAppointments, currentPage]);
-
-  // Statistics
-  const pendingCount = appointments.filter((a) => a.status === "PENDING_CONFIRMATION").length;
-  const confirmedCount = appointments.filter((a) => a.status === "CONFIRMED").length;
-  const completedCount = appointments.filter((a) => a.status === "COMPLETED").length;
-  const rejectedOrCancelledCount = appointments.filter(
+  // Global KPI Statistics
+  const allAppointments = MockStore.getAppointments();
+  const pendingCount = allAppointments.filter((a) => a.status === "PENDING_CONFIRMATION").length;
+  const confirmedCount = allAppointments.filter((a) => a.status === "CONFIRMED").length;
+  const completedCount = allAppointments.filter((a) => a.status === "COMPLETED").length;
+  const rejectedOrCancelledCount = allAppointments.filter(
     (a) => a.status === "REJECTED" || a.status === "CANCELLED"
   ).length;
 
@@ -223,7 +232,7 @@ export default function AppointmentsPage() {
           setStatusFilter("ALL");
           setEmployeeFilter("ALL");
         }}
-        totalResults={filteredAppointments.length}
+        totalResults={totalAppointments}
         filters={[
           {
             id: "status",
@@ -250,11 +259,11 @@ export default function AppointmentsPage() {
       />
 
       {/* Appointments Table */}
-      {isLoading ? (
-        <TableSkeleton rows={5} columns={7} message="جاري جلب قائمة طلبات المعاينة والمواعيد..." />
+      {isTableLoading || isLoading ? (
+        <TableSkeleton rows={PAGE_SIZE} columns={7} message="جاري جلب قائمة طلبات المعاينة والمواعيد..." />
       ) : (
         <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-          {filteredAppointments.length > 0 ? (
+          {appointments.length > 0 ? (
             <>
               <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm">
@@ -270,7 +279,7 @@ export default function AppointmentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-border-subtle">
-                  {paginatedAppointments.map((appt) => {
+                  {appointments.map((appt) => {
                     const statusCfg = APPOINTMENT_STATUS_CONFIG[appt.status];
                     return (
                       <tr key={appt.id} className="hover:bg-zinc-50/70 transition-colors">
@@ -433,11 +442,11 @@ export default function AppointmentsPage() {
                 </span>{" "}
                 إلى{" "}
                 <span className="font-bold text-primary-text font-tabular">
-                  {Math.min(currentPage * PAGE_SIZE, filteredAppointments.length)}
+                  {Math.min(currentPage * PAGE_SIZE, totalAppointments)}
                 </span>{" "}
                 من أصل{" "}
                 <span className="font-bold text-primary-text font-tabular">
-                  {filteredAppointments.length}
+                  {totalAppointments}
                 </span>{" "}
                 موعد
               </div>
