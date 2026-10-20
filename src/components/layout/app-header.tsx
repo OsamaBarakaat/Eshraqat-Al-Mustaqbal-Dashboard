@@ -15,6 +15,7 @@ import { useToast } from "../shared/toast-provider";
 import { BrandLogo } from "../shared/brand-logo";
 import { usePermissions } from "@/lib/hooks/use-permissions";
 import { MockStore } from "@/lib/services/mock-store";
+import { cn } from "@/lib/utils";
 
 interface AppHeaderProps {
   onOpenMobileMenu: () => void;
@@ -27,8 +28,17 @@ export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -50,7 +60,12 @@ export function AppHeader({ onOpenMobileMenu }: AppHeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-20 h-16 bg-surface/95 backdrop-blur-md border-b border-neutral-border px-4 sm:px-6 flex items-center justify-between gap-4">
+      <header
+        className={cn(
+          "sticky top-0 z-20 h-16 bg-surface/95 backdrop-blur-md border-b border-neutral-border px-4 sm:px-6 flex items-center justify-between gap-4 transition-all duration-200",
+          isScrolled ? "shadow-sm shadow-black/5" : ""
+        )}
+      >
         {/* Right side: Mobile Menu Trigger & Mobile Logo */}
         <div className="flex items-center gap-2.5">
           <button

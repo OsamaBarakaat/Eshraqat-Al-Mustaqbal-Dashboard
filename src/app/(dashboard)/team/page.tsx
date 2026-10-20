@@ -21,6 +21,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ProtectedRoute } from "@/components/shared/protected-route";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { useToast } from "@/components/shared/toast-provider";
 import { ROLE_CONFIG } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -30,6 +31,7 @@ export default function TeamPermissionsPage() {
   const { success, warning, info } = useToast();
   const [users, setUsers] = useState<AdminUser[]>(MockStore.getUsers());
   const [roles, setRoles] = useState<Role[]>(MockStore.getRoles());
+  const [isLoading, setIsLoading] = useState(MockStore.isLoading());
 
   const [activeTab, setActiveTab] = useState<"USERS" | "ROLES_MATRIX">("USERS");
 
@@ -54,9 +56,11 @@ export default function TeamPermissionsPage() {
   const [newRoleDescription, setNewRoleDescription] = useState("");
 
   useEffect(() => {
+    setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setUsers(MockStore.getUsers());
       setRoles(MockStore.getRoles());
+      setIsLoading(MockStore.isLoading());
     });
     return unsubscribe;
   }, []);
@@ -268,6 +272,7 @@ export default function TeamPermissionsPage() {
               icon={Users2}
               subtitle="حسابات مسجلة"
               variant="gold"
+              loading={isLoading}
             />
             <StatCard
               title="الحسابات النشطة"
@@ -275,6 +280,7 @@ export default function TeamPermissionsPage() {
               icon={ShieldCheck}
               subtitle="تسجيل دخول مفعل"
               variant="success"
+              loading={isLoading}
             />
             <StatCard
               title="مديرو النظام (Super Admins)"
@@ -282,6 +288,7 @@ export default function TeamPermissionsPage() {
               icon={KeyRound}
               subtitle="صلاحيات مطلقة"
               variant="info"
+              loading={isLoading}
             />
             <StatCard
               title="مستشارو المبيعات"
@@ -289,12 +296,16 @@ export default function TeamPermissionsPage() {
               icon={Users2}
               subtitle="معاينات ومتابعة العملاء"
               variant="default"
+              loading={isLoading}
             />
           </div>
 
-          <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs sm:text-sm">
+          {isLoading ? (
+            <TableSkeleton rows={5} columns={7} message="جاري جلب قائمة فريق العمل والمشرفين..." />
+          ) : (
+            <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs sm:text-sm">
                 <thead className="bg-zinc-50 border-b border-neutral-border text-secondary-text font-semibold select-none">
                   <tr>
                     <th className="py-3.5 px-4">الموظف / المسؤول</th>
@@ -390,6 +401,7 @@ export default function TeamPermissionsPage() {
               </table>
             </div>
           </div>
+          )}
         </div>
       )}
 

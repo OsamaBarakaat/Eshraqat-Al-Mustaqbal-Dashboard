@@ -22,6 +22,7 @@ import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { useToast } from "@/components/shared/toast-provider";
 import { APPOINTMENT_STATUS_CONFIG } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -45,6 +46,7 @@ export default function AppointmentsPage() {
   const { success, warning, info } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>(MockStore.getAppointments());
   const [employees, setEmployees] = useState<AdminUser[]>(MockStore.getUsers());
+  const [isLoading, setIsLoading] = useState(MockStore.isLoading());
 
   // Search & Filters
   const [search, setSearch] = useState("");
@@ -63,9 +65,11 @@ export default function AppointmentsPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
   useEffect(() => {
+    setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setAppointments(MockStore.getAppointments());
       setEmployees(MockStore.getUsers());
+      setIsLoading(MockStore.isLoading());
     });
     return unsubscribe;
   }, []);
@@ -180,6 +184,7 @@ export default function AppointmentsPage() {
           icon={Clock}
           subtitle="تتطلب مراجعة فورية"
           variant="warning"
+          loading={isLoading}
         />
         <StatCard
           title="معاينات مؤكدة ومجدولة"
@@ -187,6 +192,7 @@ export default function AppointmentsPage() {
           icon={CheckCircle}
           subtitle="جاهزة للتنفيذ الميداني"
           variant="success"
+          loading={isLoading}
         />
         <StatCard
           title="معاينات مكتملة"
@@ -194,6 +200,7 @@ export default function AppointmentsPage() {
           icon={UserCheck}
           subtitle="تمت المعاينة بنجاح"
           variant="info"
+          loading={isLoading}
         />
         <StatCard
           title="مرفوضة / ملغاة"
@@ -201,6 +208,7 @@ export default function AppointmentsPage() {
           icon={XCircle}
           subtitle="اعتذار أو تعارض مواعيد"
           variant="default"
+          loading={isLoading}
         />
       </div>
 
@@ -242,10 +250,13 @@ export default function AppointmentsPage() {
       />
 
       {/* Appointments Table */}
-      <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-        {filteredAppointments.length > 0 ? (
-          <>
-            <div className="overflow-x-auto">
+      {isLoading ? (
+        <TableSkeleton rows={5} columns={7} message="جاري جلب قائمة طلبات المعاينة والمواعيد..." />
+      ) : (
+        <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
+          {filteredAppointments.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm">
                 <thead className="bg-zinc-50 border-b border-neutral-border text-secondary-text font-semibold select-none">
                   <tr>
@@ -483,6 +494,7 @@ export default function AppointmentsPage() {
           />
         )}
       </div>
+      )}
 
       {/* Appointment Details Modal */}
       {detailsModalOpen && selectedAppointment && (

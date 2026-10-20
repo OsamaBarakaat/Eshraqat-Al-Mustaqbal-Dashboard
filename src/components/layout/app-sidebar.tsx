@@ -21,7 +21,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col bg-brand-charcoal text-zinc-300 border-l border-zinc-800 transition-all duration-300 select-none z-30 shrink-0 sticky top-0 h-screen",
+        "hidden lg:flex flex-col bg-brand-charcoal text-zinc-300 border-l border-zinc-800 transition-[width] duration-300 ease-in-out select-none z-30 shrink-0 sticky top-0 h-screen",
         collapsed ? "w-20" : "w-64"
       )}
     >
@@ -40,7 +40,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
       </div>
 
       {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 sidebar-scrollbar">
         {NAVIGATION_SECTIONS.map((section, idx) => {
           const visibleItems = section.items.filter(
             (item) => !item.module || hasModule(item.module)
@@ -67,17 +67,17 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all relative",
+                        "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ease-out relative cursor-pointer",
                         isActive
-                          ? "bg-brand-gold text-brand-charcoal font-semibold shadow-xs shadow-brand-gold/30"
-                          : "text-zinc-300 hover:text-white hover:bg-zinc-800/70",
-                        collapsed && "justify-center px-0"
+                          ? "bg-brand-gold text-brand-charcoal font-semibold shadow-xs shadow-brand-gold/30 -translate-x-1"
+                          : "text-zinc-300 hover:text-white hover:bg-zinc-800/80 hover:-translate-x-0.5",
+                        collapsed && "justify-center px-0 hover:translate-x-0"
                       )}
                       title={collapsed ? item.title : undefined}
                     >
                       <Icon
                         className={cn(
-                          "w-5 h-5 shrink-0 transition-transform group-hover:scale-105",
+                          "w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110",
                           isActive ? "text-brand-charcoal" : "text-zinc-400 group-hover:text-brand-gold"
                         )}
                       />
@@ -100,9 +100,14 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
                         </div>
                       )}
 
+                      {/* Active indicator bar */}
+                      {isActive && !collapsed && (
+                        <span className="absolute right-0 top-2 bottom-2 w-1 rounded-l-full bg-brand-charcoal/40" />
+                      )}
+
                       {/* Tooltip on collapsed */}
                       {collapsed && (
-                        <span className="absolute right-full mr-2 hidden group-hover:flex items-center px-2 py-1 text-xs font-medium text-white bg-zinc-900 border border-zinc-700 rounded-md shadow-lg whitespace-nowrap z-50">
+                        <span className="absolute right-full mr-2 hidden group-hover:flex items-center px-2 py-1 text-xs font-medium text-white bg-zinc-900 border border-zinc-700 rounded-md shadow-lg whitespace-nowrap z-50 animate-in fade-in-50 duration-150">
                           {item.title}
                         </span>
                       )}

@@ -56,6 +56,59 @@ let isLoadingBackend = false;
 
 let auditLogState: AuditActivity[] = [];
 
+// ==========================================
+// STALE-WHILE-REVALIDATE CACHE
+// ==========================================
+const CACHE_KEY = "eshraqat_dashboard_cache_v2";
+
+function loadCachedState() {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.properties)) propertiesState = data.properties;
+    if (Array.isArray(data.appointments)) appointmentsState = data.appointments;
+    if (Array.isArray(data.clients)) clientsState = data.clients;
+    if (Array.isArray(data.inquiries)) inquiriesState = data.inquiries;
+    if (Array.isArray(data.users) && data.users.length > 0) usersState = data.users;
+    if (Array.isArray(data.roles) && data.roles.length > 0) rolesState = data.roles;
+    if (Array.isArray(data.locations) && data.locations.length > 0) locationsState = data.locations;
+    if (Array.isArray(data.auditLog)) auditLogState = data.auditLog;
+    if (data.currentUser) currentUserObj = data.currentUser;
+    if (data.timestamp && Date.now() - data.timestamp < 1000 * 60 * 60) {
+      isInitializedFromBackend = true;
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function saveCachedState() {
+  if (typeof window === "undefined") return;
+  try {
+    const data = {
+      properties: propertiesState,
+      appointments: appointmentsState,
+      clients: clientsState,
+      inquiries: inquiriesState,
+      users: usersState,
+      roles: rolesState,
+      locations: locationsState,
+      auditLog: auditLogState,
+      currentUser: currentUserObj,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
+if (typeof window !== "undefined") {
+  loadCachedState();
+}
+
 type Listener = () => void;
 const listeners: Set<Listener> = new Set();
 
@@ -245,23 +298,20 @@ export const MockStore = {
     if (typeof window === "undefined") return;
 
     try {
-      // 1. Try to load user profile if token exists
       const token = localStorage.getItem("eshraqat_access_token");
-      if (token) {
-        try {
-          const profile = await apiClient.get<any>("/auth/me");
-          if (profile) {
-            currentUserObj = mapBackendUserToDashboard(profile);
-            currentUserIdState = profile.id;
-          }
-        } catch {
-          // Token might be expired
-        }
+      if (!token) {
+        isLoadingBackend = false;
+        isInitializedFromBackend = true;
+        notifyListeners();
+        return;
       }
 
       isLoadingBackend = true;
-      // 2. Load Core Modules in parallel
+      notifyListeners();
+
+      // Load all core modules and auth profile simultaneously in parallel
       const [
+        meRes,
         propertiesRes,
         locationsRes,
         appointmentsRes,
@@ -277,6 +327,7 @@ export const MockStore = {
         pagesRes,
         auditRes,
       ] = await Promise.allSettled([
+        apiClient.get<any>("/auth/me"),
         apiClient.get<any>("/properties", { limit: 100 }),
         apiClient.get<any>("/locations"),
         apiClient.get<any>("/appointments", { limit: 100 }),
@@ -292,6 +343,11 @@ export const MockStore = {
         apiClient.get<any>("/cms/pages"),
         apiClient.get<any>("/audit-logs", { limit: 15 }),
       ]);
+
+      if (meRes.status === "fulfilled" && meRes.value) {
+        currentUserObj = mapBackendUserToDashboard(meRes.value);
+        currentUserIdState = meRes.value.id;
+      }
 
       if (propertiesRes.status === "fulfilled" && propertiesRes.value?.items) {
         propertiesState = propertiesRes.value.items.map(mapBackendPropertyToDashboard);
@@ -439,6 +495,7 @@ export const MockStore = {
       }
 
       isInitializedFromBackend = true;
+      saveCachedState();
       notifyListeners();
     } catch {
       // Keep state as is
@@ -1394,6 +1451,10 @@ export const MockStore = {
   },
 
   isLoading(): boolean {
+    return !isInitializedFromBackend;
+  },
+
+  isSyncing(): boolean {
     return isLoadingBackend;
   },
 
@@ -1428,9 +1489,9 @@ export const MockStore = {
   },
 };
 
-// Auto-trigger backend sync on client load
-if (typeof window !== "undefined" && !isInitializedFromBackend) {
+// Auto-trigger backend sync immediately on client load
+if (typeof window !== "undefined") {
   setTimeout(() => {
     MockStore.initFromBackend();
-  }, 100);
+  }, 0);
 }

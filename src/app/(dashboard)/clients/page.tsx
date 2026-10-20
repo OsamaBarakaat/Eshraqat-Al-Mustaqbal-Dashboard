@@ -19,6 +19,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { useToast } from "@/components/shared/toast-provider";
 import { LEAD_STATUS_CONFIG, LEAD_SOURCE_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
@@ -29,6 +30,7 @@ const PAGE_SIZE = 5;
 export default function ClientsPage() {
   const { success } = useToast();
   const [clients, setClients] = useState<Client[]>(MockStore.getClients());
+  const [isLoading, setIsLoading] = useState(MockStore.isLoading());
 
   // Search & Filters
   const [search, setSearch] = useState("");
@@ -43,8 +45,10 @@ export default function ClientsPage() {
   const [newNote, setNewNote] = useState("");
 
   useEffect(() => {
+    setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setClients(MockStore.getClients());
+      setIsLoading(MockStore.isLoading());
       if (selectedClient) {
         const updated = MockStore.getClientById(selectedClient.id);
         if (updated) setSelectedClient({ ...updated });
@@ -116,6 +120,7 @@ export default function ClientsPage() {
           icon={Users2}
           subtitle="قاعدة بيانات العملاء"
           variant="gold"
+          loading={isLoading}
         />
         <StatCard
           title="عملاء جدد"
@@ -123,6 +128,7 @@ export default function ClientsPage() {
           icon={Clock}
           subtitle="بانتظار أول اتصال تمهيدي"
           variant="warning"
+          loading={isLoading}
         />
         <StatCard
           title="عملاء مؤهلون وجادون"
@@ -130,6 +136,7 @@ export default function ClientsPage() {
           icon={UserCheck}
           subtitle="ميزانية نقدية جاهزة"
           variant="default"
+          loading={isLoading}
         />
         <StatCard
           title="تم التعاقد والبيع"
@@ -137,6 +144,7 @@ export default function ClientsPage() {
           icon={CheckCircle}
           subtitle="صفقات ناجحة مكتملة"
           variant="success"
+          loading={isLoading}
         />
       </div>
 
@@ -182,10 +190,13 @@ export default function ClientsPage() {
       />
 
       {/* Clients Table */}
-      <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-        {filteredClients.length > 0 ? (
-          <>
-            <div className="overflow-x-auto">
+      {isLoading ? (
+        <TableSkeleton rows={5} columns={8} message="جاري جلب بيانات العملاء المحتملين..." />
+      ) : (
+        <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
+          {filteredClients.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm">
                 <thead className="bg-zinc-50 border-b border-neutral-border text-secondary-text font-semibold select-none">
                   <tr>
@@ -379,6 +390,7 @@ export default function ClientsPage() {
           />
         )}
       </div>
+      )}
 
       {/* Client Details and History Timeline Modal */}
       {selectedClient && (

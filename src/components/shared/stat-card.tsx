@@ -16,6 +16,7 @@ interface StatCardProps {
   variant?: "default" | "gold" | "warning" | "success" | "info";
   href?: string;
   className?: string;
+  loading?: boolean;
 }
 
 export function StatCard({
@@ -27,6 +28,7 @@ export function StatCard({
   variant = "default",
   href,
   className,
+  loading = false,
 }: StatCardProps) {
   const iconBgMap = {
     default: "bg-zinc-100 text-zinc-700",
@@ -58,9 +60,13 @@ export function StatCard({
         <div className="flex-1 min-w-0 text-right">
           <p className="text-xs sm:text-sm font-medium text-secondary-text truncate" title={title}>{title}</p>
           <div className="mt-1.5 sm:mt-2 flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-text font-tabular truncate block">
-              {displayValue}
-            </span>
+            {loading ? (
+              <div className="h-7 sm:h-8 w-16 bg-zinc-200/80 rounded-lg animate-pulse" />
+            ) : (
+              <span className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-text font-tabular truncate block">
+                {displayValue}
+              </span>
+            )}
           </div>
         </div>
 

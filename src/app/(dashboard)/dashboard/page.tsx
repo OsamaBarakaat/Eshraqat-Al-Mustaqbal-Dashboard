@@ -47,14 +47,17 @@ export default function DashboardPage() {
   const [inquiries, setInquiries] = useState(MockStore.getInquiries());
   const [properties, setProperties] = useState(MockStore.getProperties());
   const [auditLog, setAuditLog] = useState(MockStore.getAuditLog());
+  const [isLoading, setIsLoading] = useState(MockStore.isLoading());
 
   useEffect(() => {
+    setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setStats(MockStore.getDashboardStats());
       setAppointments(MockStore.getAppointments());
       setInquiries(MockStore.getInquiries());
       setProperties(MockStore.getProperties());
       setAuditLog(MockStore.getAuditLog());
+      setIsLoading(MockStore.isLoading());
     });
     return unsubscribe;
   }, []);
@@ -111,6 +114,7 @@ export default function DashboardPage() {
           trend={{ value: 12, isPositive: true, label: "عن الشهر السابق" }}
           variant="gold"
           href="/properties"
+          loading={isLoading}
         />
 
         <StatCard
@@ -121,6 +125,7 @@ export default function DashboardPage() {
           trend={{ value: 25, isPositive: true, label: "طلبات نشطة" }}
           variant="warning"
           href="/appointments"
+          loading={isLoading}
         />
 
         <StatCard
@@ -130,6 +135,7 @@ export default function DashboardPage() {
           subtitle="مجدولة للمعاينة الميدانية"
           variant="success"
           href="/appointments"
+          loading={isLoading}
         />
 
         <StatCard
@@ -139,6 +145,7 @@ export default function DashboardPage() {
           subtitle="رسائل في صندوق الوارد"
           variant="info"
           href="/inquiries"
+          loading={isLoading}
         />
 
         <StatCard
@@ -148,6 +155,7 @@ export default function DashboardPage() {
           subtitle={`${stats.convertedClients} عميل أتم التعاقد`}
           trend={{ value: 8, isPositive: true }}
           href="/clients"
+          loading={isLoading}
         />
 
         <StatCard
@@ -156,6 +164,7 @@ export default function DashboardPage() {
           icon={MapPin}
           subtitle="شجرة التوزيع الجغرافي بالسعودية"
           href="/locations"
+          loading={isLoading}
         />
 
         <StatCard
@@ -164,6 +173,7 @@ export default function DashboardPage() {
           icon={Eye}
           subtitle="معروضة للبيع والإيجار"
           href="/properties?status=PUBLISHED"
+          loading={isLoading}
         />
 
         <StatCard
@@ -172,6 +182,7 @@ export default function DashboardPage() {
           icon={FileText}
           subtitle="قيد المراجعة أو غير منشورة"
           href="/properties"
+          loading={isLoading}
         />
       </div>
 
@@ -269,24 +280,41 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-neutral-border-subtle">
-              {recentInquiries.map((inq) => {
-                const statusCfg = INQUIRY_STATUS_CONFIG[inq.status];
-                return (
-                  <div key={inq.id} className="py-3 flex items-start justify-between gap-3">
-                    <div className="overflow-hidden flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-xs sm:text-sm text-primary-text">{inq.senderName}</span>
-                        <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
+              {isLoading ? (
+                <div className="space-y-3 py-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="py-2 animate-pulse space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="h-4 w-28 bg-zinc-200 rounded-md" />
+                        <div className="h-3 w-16 bg-zinc-200 rounded-md" />
                       </div>
-                      <p className="text-xs text-primary-text font-medium mt-1 truncate">{inq.subject}</p>
-                      <p className="text-xs text-secondary-text mt-0.5 line-clamp-1">{inq.message}</p>
+                      <div className="h-3 w-3/4 bg-zinc-200 rounded-md" />
+                      <div className="h-2.5 w-1/2 bg-zinc-100 rounded-md" />
                     </div>
-                    <span className="text-[10px] text-muted-text whitespace-nowrap shrink-0 mt-1">
-                      {formatDateTime(inq.submittedAt)}
-                    </span>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              ) : recentInquiries.length > 0 ? (
+                recentInquiries.map((inq) => {
+                  const statusCfg = INQUIRY_STATUS_CONFIG[inq.status];
+                  return (
+                    <div key={inq.id} className="py-3 flex items-start justify-between gap-3">
+                      <div className="overflow-hidden flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-xs sm:text-sm text-primary-text">{inq.senderName}</span>
+                          <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
+                        </div>
+                        <p className="text-xs text-primary-text font-medium mt-1 truncate">{inq.subject}</p>
+                        <p className="text-xs text-secondary-text mt-0.5 line-clamp-1">{inq.message}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-text whitespace-nowrap shrink-0 mt-1">
+                        {formatDateTime(inq.submittedAt)}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-xs text-secondary-text py-6 text-center">لا توجد رسائل أو استفسارات حالياً.</p>
+              )}
             </div>
           </div>
 
@@ -321,7 +349,20 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-neutral-border-subtle">
-              {upcomingAppointments.length > 0 ? (
+              {isLoading ? (
+                <div className="space-y-3 py-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="py-2 animate-pulse space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="h-4 w-28 bg-zinc-200 rounded-md" />
+                        <div className="h-3 w-20 bg-zinc-200 rounded-md" />
+                      </div>
+                      <div className="h-3 w-1/2 bg-zinc-200 rounded-md" />
+                      <div className="h-2.5 w-1/3 bg-zinc-100 rounded-md" />
+                    </div>
+                  ))}
+                </div>
+              ) : upcomingAppointments.length > 0 ? (
                 upcomingAppointments.map((appt) => (
                   <div key={appt.id} className="py-3 flex items-start justify-between gap-3">
                     <div className="overflow-hidden flex-1">
@@ -379,7 +420,18 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {recentProperties.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-neutral-border-subtle p-3 animate-pulse space-y-3 bg-warm-white/50">
+                  <div className="aspect-video rounded-lg bg-zinc-200" />
+                  <div className="h-3 w-16 bg-zinc-200 rounded-md" />
+                  <div className="h-4 w-3/4 bg-zinc-200 rounded-md" />
+                  <div className="h-3 w-1/3 bg-zinc-200 rounded-md" />
+                </div>
+              ))}
+            </div>
+          ) : recentProperties.length === 0 ? (
             <div className="p-8 text-center bg-warm-white/40 rounded-xl border border-dashed border-neutral-border text-xs text-secondary-text">
               لا توجد عقارات مضافة بعد. يمكنك النقر على &quot;إضافة عقار جديد&quot; لبدء إضافة عقاراتك.
             </div>
@@ -447,7 +499,21 @@ export default function DashboardPage() {
             <p className="text-xs text-secondary-text mt-0.5">عمليات الموظفين والمشرفين باللوحة (حي ومباشر)</p>
           </div>
 
-          {auditLog.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="relative pr-4 border-r-2 border-zinc-200 animate-pulse space-y-2">
+                  <span className="absolute -right-[5px] top-1.5 w-2 h-2 rounded-full bg-zinc-300" />
+                  <div className="h-3.5 w-24 bg-zinc-200 rounded-md" />
+                  <div className="h-3 w-40 bg-zinc-200 rounded-md" />
+                  <div className="flex justify-between">
+                    <div className="h-2.5 w-16 bg-zinc-100 rounded-md" />
+                    <div className="h-2.5 w-12 bg-zinc-100 rounded-md" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : auditLog.length === 0 ? (
             <div className="p-6 text-center bg-warm-white/40 rounded-xl border border-dashed border-neutral-border text-xs text-secondary-text">
               لا توجد عمليات إدارية مسجلة بعد في قاعدة البيانات.
             </div>

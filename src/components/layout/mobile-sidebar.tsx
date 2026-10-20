@@ -65,7 +65,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
         </div>
 
         {/* Navigation links */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 sidebar-scrollbar">
           {NAVIGATION_SECTIONS.map((section, idx) => {
             const visibleItems = section.items.filter(
               (item) => !item.module || hasModule(item.module)

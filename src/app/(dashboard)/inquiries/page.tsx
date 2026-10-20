@@ -21,6 +21,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { useToast } from "@/components/shared/toast-provider";
 import { INQUIRY_STATUS_CONFIG, INQUIRY_TYPE_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
@@ -31,6 +32,7 @@ const PAGE_SIZE = 5;
 export default function InquiriesPage() {
   const { success } = useToast();
   const [inquiries, setInquiries] = useState<Inquiry[]>(MockStore.getInquiries());
+  const [isLoading, setIsLoading] = useState(MockStore.isLoading());
 
   // Search & Filters
   const [search, setSearch] = useState("");
@@ -45,8 +47,10 @@ export default function InquiriesPage() {
   const [replyNotes, setReplyNotes] = useState("");
 
   useEffect(() => {
+    setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setInquiries(MockStore.getInquiries());
+      setIsLoading(MockStore.isLoading());
       if (selectedInquiry) {
         const found = MockStore.getInquiries().find((i) => i.id === selectedInquiry.id);
         if (found) setSelectedInquiry({ ...found });
@@ -119,6 +123,7 @@ export default function InquiriesPage() {
           icon={Mail}
           subtitle="صندوق الوارد الكلي"
           variant="gold"
+          loading={isLoading}
         />
         <StatCard
           title="رسائل جديدة لم تقرأ"
@@ -126,6 +131,7 @@ export default function InquiriesPage() {
           icon={Clock}
           subtitle="تتطلب استجابة سريعة"
           variant="warning"
+          loading={isLoading}
         />
         <StatCard
           title="قيد المتابعة"
@@ -133,6 +139,7 @@ export default function InquiriesPage() {
           icon={MessageSquare}
           subtitle="جارٍ التواصل مع العميل"
           variant="info"
+          loading={isLoading}
         />
         <StatCard
           title="تم الرد والمعالجة"
@@ -140,6 +147,7 @@ export default function InquiriesPage() {
           icon={CheckCircle2}
           subtitle="استفسارات منجزة"
           variant="success"
+          loading={isLoading}
         />
       </div>
 
@@ -184,10 +192,13 @@ export default function InquiriesPage() {
       />
 
       {/* Inquiries Table */}
-      <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
-        {filteredInquiries.length > 0 ? (
-          <>
-            <div className="overflow-x-auto">
+      {isLoading ? (
+        <TableSkeleton rows={5} columns={7} message="جاري جلب استفسارات ورسائل الموقع..." />
+      ) : (
+        <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
+          {filteredInquiries.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm">
                 <thead className="bg-zinc-50 border-b border-neutral-border text-secondary-text font-semibold select-none">
                   <tr>
@@ -369,6 +380,7 @@ export default function InquiriesPage() {
           />
         )}
       </div>
+      )}
 
       {/* Inquiry Detail and Reply Modal */}
       {selectedInquiry && (

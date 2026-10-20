@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
 import { PermissionGuard } from "@/components/shared/permission-guard";
+import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { useToast } from "@/components/shared/toast-provider";
 import {
   PROPERTY_CATEGORY_LABELS,
@@ -38,6 +39,7 @@ export default function PropertiesListPage() {
   const { success, error: toastError, info } = useToast();
   const [properties, setProperties] = useState<Property[]>(MockStore.getProperties());
   const [provinces, setProvinces] = useState(MockStore.getLocations());
+  const [isLoading, setIsLoading] = useState(MockStore.isLoading());
 
   // Search and filter states
   const [search, setSearch] = useState("");
@@ -56,9 +58,11 @@ export default function PropertiesListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
 
   useEffect(() => {
+    setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setProperties(MockStore.getProperties());
       setProvinces(MockStore.getLocations());
+      setIsLoading(MockStore.isLoading());
     });
     return unsubscribe;
   }, []);
@@ -200,6 +204,7 @@ export default function PropertiesListPage() {
           icon={Building2}
           subtitle="محفظة المنصة الكلية"
           variant="gold"
+          loading={isLoading}
         />
         <StatCard
           title="عقارات منشورة"
@@ -207,6 +212,7 @@ export default function PropertiesListPage() {
           icon={CheckCircle}
           subtitle="متاحة للمعاينة والحجز"
           variant="success"
+          loading={isLoading}
         />
         <StatCard
           title="مسودات قيد الإعداد"
@@ -214,6 +220,7 @@ export default function PropertiesListPage() {
           icon={Layers}
           subtitle="تحت المراجعة والتجهيز"
           variant="warning"
+          loading={isLoading}
         />
         <StatCard
           title="تم البيع / التأجير"
@@ -221,6 +228,7 @@ export default function PropertiesListPage() {
           icon={Archive}
           subtitle="صفقات مكتملة ناجحة"
           variant="info"
+          loading={isLoading}
         />
       </div>
 
@@ -369,6 +377,9 @@ export default function PropertiesListPage() {
       </div>
 
       {/* Properties Table Card */}
+      {isLoading ? (
+        <TableSkeleton rows={5} columns={9} message="جاري جلب قائمة العقارات الحية من قاعدة البيانات..." />
+      ) : (
       <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
         {paginatedProperties.length > 0 ? (
           <div className="overflow-x-auto">
@@ -589,6 +600,7 @@ export default function PropertiesListPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Delete Confirmation Modal with Password verification */}
       <ConfirmDialog
