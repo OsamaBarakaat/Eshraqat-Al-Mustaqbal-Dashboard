@@ -1633,6 +1633,13 @@ export const MockStore = {
     const newInqs = inquiriesState.filter((i) => i.status === "NEW").length;
     const converted = clientsState.filter((c) => c.status === "CONVERTED").length;
 
+    const totalDistricts = locationsState.reduce(
+      (sum, p) => sum + (p.cities || []).reduce((cSum, c) => cSum + (c.districts || []).length, 0),
+      0
+    );
+    const totalCities = locationsState.reduce((sum, p) => sum + (p.cities || []).length, 0);
+    const totalProvinces = locationsState.length;
+
     return {
       totalProperties: propertiesState.length,
       publishedProperties: publishedProps,
@@ -1644,6 +1651,9 @@ export const MockStore = {
       newInquiries: newInqs,
       totalClients: clientsState.length,
       convertedClients: converted,
+      totalDistricts,
+      totalCities,
+      totalProvinces,
     };
   },
 };

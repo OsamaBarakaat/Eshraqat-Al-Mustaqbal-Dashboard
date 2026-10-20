@@ -9,6 +9,9 @@ export interface DashboardStats {
   newInquiries: number;
   totalClients: number;
   convertedClients: number;
+  totalDistricts?: number;
+  totalCities?: number;
+  totalProvinces?: number;
 }
 
 export interface PropertyTypeDistribution {

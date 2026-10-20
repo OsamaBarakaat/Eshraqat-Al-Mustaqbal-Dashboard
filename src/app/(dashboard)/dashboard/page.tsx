@@ -160,9 +160,13 @@ export default function DashboardPage() {
 
         <StatCard
           title="المواقع والمناطق الجغرافية"
-          value="15+ حي"
+          value={stats.totalDistricts !== undefined ? `${stats.totalDistricts} حي` : "0 حي"}
           icon={MapPin}
-          subtitle="شجرة التوزيع الجغرافي بالسعودية"
+          subtitle={
+            (stats.totalCities ?? 0) > 0 || (stats.totalProvinces ?? 0) > 0
+              ? `${stats.totalCities ?? 0} مدينة • ${stats.totalProvinces ?? 0} مناطق`
+              : "شجرة التوزيع الجغرافي بالسعودية"
+          }
           href="/locations"
           loading={isLoading}
         />
