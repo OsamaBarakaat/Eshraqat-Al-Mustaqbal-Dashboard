@@ -68,6 +68,7 @@ export default function WebsiteContentPage() {
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(MockStore.getHomepageContent());
   const [seoDefaults, setSeoDefaults] = useState<SeoDefaults>(MockStore.getSeoDefaults());
   const [isSavingHomepage, setIsSavingHomepage] = useState(false);
+  const [isSavingContact, setIsSavingContact] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Vision Pillars State (لماذا يختار النخبة؟)
@@ -338,10 +339,17 @@ export default function WebsiteContentPage() {
     success("تم حفظ محتوى الصفحة", "تم تحديث نصوص السياسة والشروط بنجاح.");
   };
 
-  const handleSaveContact = (e: React.FormEvent) => {
+  const handleSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    MockStore.updateContactSettings(contactSettings);
-    success("تم حفظ بيانات الاتصال", "تم تحديث أرقام التواصل وعناوين الفروع.");
+    setIsSavingContact(true);
+    try {
+      await MockStore.updateContactSettings(contactSettings);
+      success("تم حفظ بيانات الاتصال", "تم تحديث أرقام التواصل وعناوين الفروع ومزامنتها بنجاح مع قاعدة البيانات والموقع.");
+    } catch (err: any) {
+      toastError("تعذر حفظ بيانات الاتصال", err?.message || "يرجى التحقق من الاتصال بالخادم والمحاولة مجدداً.");
+    } finally {
+      setIsSavingContact(false);
+    }
   };
 
   const handleToggleSocial = (id: string) => {
@@ -822,10 +830,20 @@ export default function WebsiteContentPage() {
           <div className="pt-3 border-t border-neutral-border-subtle flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs cursor-pointer"
+              disabled={isSavingContact}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover disabled:opacity-50 rounded-xl shadow-xs cursor-pointer"
             >
-              <Save className="w-4 h-4" />
-              <span>حفظ بيانات الاتصال</span>
+              {isSavingContact ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>جارٍ الحفظ...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>حفظ بيانات الاتصال</span>
+                </>
+              )}
             </button>
           </div>
         </form>

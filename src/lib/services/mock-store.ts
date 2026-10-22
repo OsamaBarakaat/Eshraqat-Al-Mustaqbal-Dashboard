@@ -1478,13 +1478,22 @@ export const MockStore = {
     return { ...contactSettingsState };
   },
 
-  updateContactSettings(settings: Partial<ContactSettings>): ContactSettings {
+  async updateContactSettings(settings: Partial<ContactSettings>): Promise<ContactSettings> {
     contactSettingsState = { ...contactSettingsState, ...settings };
+    saveCachedState();
     notifyListeners();
 
-    apiClient.put("/cms/contact", contactSettingsState).catch((err) => {
+    try {
+      const res = await apiClient.put("/cms/contact", contactSettingsState);
+      if (res) {
+        contactSettingsState = { ...contactSettingsState, ...res };
+        saveCachedState();
+        notifyListeners();
+      }
+    } catch (err) {
       console.error("Failed to update contact settings on backend:", err);
-    });
+      throw err;
+    }
     return contactSettingsState;
   },
 
