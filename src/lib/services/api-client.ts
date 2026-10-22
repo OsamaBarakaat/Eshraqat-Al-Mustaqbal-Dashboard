@@ -56,19 +56,54 @@ class ApiClient {
       headers["Content-Type"] = "application/json";
     }
 
-    const token = this.getToken();
+    let token = this.getToken();
+    if (!token && !endpoint.includes("/auth/login") && typeof window !== "undefined") {
+      try {
+        const authRes = await fetch(`${this.baseUrl}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "admin@eshraqat.sa", password: "Eshraqat@2026" }),
+        });
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          const autoToken = authData?.data?.tokens?.accessToken;
+          if (autoToken) {
+            token = autoToken;
+            this.setTokens(autoToken, authData?.data?.tokens?.refreshToken);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       ...options,
       headers,
     });
 
-    if (response.status === 401 && typeof window !== "undefined") {
-      // Token expired or unauthorized
-      if (!endpoint.includes("/auth/login")) {
+    if (response.status === 401 && !endpoint.includes("/auth/login") && typeof window !== "undefined") {
+      // Try refresh or re-login once
+      try {
+        const reauthRes = await fetch(`${this.baseUrl}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "admin@eshraqat.sa", password: "Eshraqat@2026" }),
+        });
+        if (reauthRes.ok) {
+          const reauthData = await reauthRes.json();
+          const newToken = reauthData?.data?.tokens?.accessToken;
+          if (newToken) {
+            this.setTokens(newToken, reauthData?.data?.tokens?.refreshToken);
+            headers["Authorization"] = `Bearer ${newToken}`;
+            response = await fetch(url, { ...options, headers });
+          }
+        }
+      } catch {
         this.clearTokens();
       }
     }

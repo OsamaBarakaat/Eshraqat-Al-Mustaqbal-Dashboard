@@ -95,12 +95,13 @@ export default function ClientsPage() {
     };
   }, [debouncedSearch, statusFilter, sourceFilter, currentPage]);
 
-  // Statistics from central store
+  // Statistics from central store or live query
   const allClients = MockStore.getClients();
-  const totalCount = allClients.length;
-  const newCount = allClients.filter((c) => c.status === "NEW").length;
-  const qualifiedCount = allClients.filter((c) => c.status === "QUALIFIED").length;
-  const convertedCount = allClients.filter((c) => c.status === "CONVERTED").length;
+  const effectiveClients = allClients.length > 0 ? allClients : clients;
+  const totalCount = Math.max(allClients.length, totalClients);
+  const newCount = effectiveClients.filter((c) => c.status === "NEW").length;
+  const qualifiedCount = effectiveClients.filter((c) => c.status === "QUALIFIED").length;
+  const convertedCount = effectiveClients.filter((c) => c.status === "CONVERTED").length;
 
   const handleStatusChange = (client: Client, newStatus: LeadStatus) => {
     MockStore.updateClientStatus(client.id, newStatus);

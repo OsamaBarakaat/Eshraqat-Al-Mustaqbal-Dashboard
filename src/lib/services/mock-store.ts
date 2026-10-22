@@ -735,6 +735,20 @@ export const MockStore = {
       const rawItems = res?.items || [];
       const total = res?.meta?.total ?? rawItems.length;
       const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+
+      if (rawItems.length > 0) {
+        rawItems.forEach((a: Appointment) => {
+          const idx = appointmentsState.findIndex((item) => item.id === a.id);
+          if (idx > -1) {
+            appointmentsState[idx] = a;
+          } else {
+            appointmentsState.push(a);
+          }
+        });
+        saveCachedState();
+        notifyListeners();
+      }
+
       return {
         items: rawItems,
         total,
@@ -835,6 +849,20 @@ export const MockStore = {
       const rawItems = res?.items || [];
       const total = res?.meta?.total ?? rawItems.length;
       const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+
+      if (rawItems.length > 0) {
+        rawItems.forEach((c: Client) => {
+          const idx = clientsState.findIndex((item) => item.id === c.id);
+          if (idx > -1) {
+            clientsState[idx] = c;
+          } else {
+            clientsState.push(c);
+          }
+        });
+        saveCachedState();
+        notifyListeners();
+      }
+
       return {
         items: rawItems,
         total,
@@ -931,6 +959,20 @@ export const MockStore = {
       const rawItems = res?.items || [];
       const total = res?.meta?.total ?? rawItems.length;
       const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
+
+      if (rawItems.length > 0) {
+        rawItems.forEach((c: Client) => {
+          const idx = clientsState.findIndex((item) => item.id === c.id);
+          if (idx > -1) {
+            clientsState[idx] = c;
+          } else {
+            clientsState.push(c);
+          }
+        });
+        saveCachedState();
+        notifyListeners();
+      }
+
       return {
         items: rawItems,
         total,

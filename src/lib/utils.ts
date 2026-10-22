@@ -6,22 +6,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Formats a number into Saudi Riyals (SAR / ر.س) currency representation in Arabic.
+ * Formats a number into Saudi Riyals (SAR / ر.س) currency representation.
  */
 export function formatCurrency(amount: number, currency: string = "ر.س"): string {
   if (amount === null || amount === undefined || isNaN(amount)) return "0 " + currency;
-  const formatted = new Intl.NumberFormat("ar-SA", {
+  const formatted = new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
   }).format(amount);
   return `${formatted} ${currency}`;
 }
 
 /**
- * Formats a plain number with localized thousands separators.
+ * Formats a plain number with localized thousands separators (0, 1, 2... format).
  */
 export function formatNumber(num: number): string {
   if (num === null || num === undefined || isNaN(num)) return "0";
-  return new Intl.NumberFormat("ar-SA").format(num);
+  return new Intl.NumberFormat("en-US").format(num);
 }
 
 /**
