@@ -27,8 +27,11 @@ import {
   Cpu,
   Banknote,
   Sparkles,
+  Loader2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
+import { apiClient } from "@/lib/services/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -64,6 +67,8 @@ export default function WebsiteContentPage() {
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(MockStore.getSocialLinks());
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(MockStore.getHomepageContent());
   const [seoDefaults, setSeoDefaults] = useState<SeoDefaults>(MockStore.getSeoDefaults());
+  const [isSavingHomepage, setIsSavingHomepage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Vision Pillars State (لماذا يختار النخبة؟)
   const [isSavingPillars, setIsSavingPillars] = useState(false);
@@ -296,27 +301,36 @@ export default function WebsiteContentPage() {
     setDeleteTarget(null);
   };
 
-  // Image Upload handler via FileReader
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Upload handler via Backend Supabase Media API
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toastError("حجم الملف كبير", "الحد الأقصى المسموح به لحجم الصورة هو 5 ميجابايت.");
+    // Check size limit (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toastError("حجم الملف كبير", "الحد الأقصى المسموح به لحجم الصورة هو 10 ميجابايت.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setHomepageContent((prev) => ({
-        ...prev,
-        heroBannerImage: result,
-      }));
-      success("تم تحميل الصورة بنجاح", "تم تجهيز صورة الهيرو للعرض. احفظ التعديلات لاعتمادها.");
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingImage(true);
+    try {
+      const res = await apiClient.uploadFile(file, "banners");
+      if (res?.url) {
+        setHomepageContent((prev) => ({
+          ...prev,
+          heroBannerImage: res.url,
+        }));
+        success("تم رفع الصورة بنجاح", "تم رفع الصورة إلى سحابة التخزين وتعيينها كبانر للهيرو.");
+      } else {
+        throw new Error("لم يتم إرجاع رابط الصورة من الخادم");
+      }
+    } catch (err: any) {
+      console.error("Image upload failed:", err);
+      toastError("تعذر رفع ملف الصورة", err?.message || "تأكد من الاتصال بالخادم أو أدخل رابط الصورة المباشر في خانة الرابط.");
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleSavePolicy = () => {
@@ -337,8 +351,15 @@ export default function WebsiteContentPage() {
 
   const handleSaveHomepage = async (e: React.FormEvent) => {
     e.preventDefault();
-    await MockStore.updateHomepageContent(homepageContent);
-    success("تم تحديث نصوص الصفحة الرئيسية", "تم حفظ إعدادات الهيرو والعناوين الترويجية ومزامنتها بنجاح.");
+    setIsSavingHomepage(true);
+    try {
+      await MockStore.updateHomepageContent(homepageContent);
+      success("تم تحديث نصوص الصفحة الرئيسية", "تم حفظ إعدادات الهيرو والعناوين ومزامنتها بنجاح مع قاعدة البيانات والموقع.");
+    } catch (err: any) {
+      toastError("تعذر حفظ تعديلات الواجهة", err?.message || "يرجى التحقق من الاتصال بالخادم والمحاولة مجدداً.");
+    } finally {
+      setIsSavingHomepage(false);
+    }
   };
 
   const handleSavePillars = async (e: React.FormEvent) => {
@@ -355,8 +376,8 @@ export default function WebsiteContentPage() {
       setHomepageContent(updated);
       await MockStore.updateHomepageContent(updated);
       success("تم حفظ ركائز التميز بنجاح", "تم تحديث محتوى قسم 'لماذا يختار النخبة' ومزامنته مع الموقع فوراً.");
-    } catch {
-      toastError("تعذر حفظ ركائز التميز", "يرجى التحقق من الاتصال بالخادم والمحاولة مجدداً.");
+    } catch (err: any) {
+      toastError("تعذر حفظ ركائز التميز", err?.message || "يرجى التحقق من الاتصال بالخادم والمحاولة مجدداً.");
     } finally {
       setIsSavingPillars(false);
     }
@@ -965,17 +986,31 @@ export default function WebsiteContentPage() {
                 />
               </div>
 
-              {/* Local File Upload for Hero Banner */}
+              {/* Hero Banner Image: Direct URL + Local File Upload */}
               <div className="sm:col-span-2 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-primary-text mb-1 flex items-center gap-1.5">
+                    <LinkIcon className="w-3.5 h-3.5 text-brand-gold" />
+                    <span>رابط صورة بانر الهيرو (URL مباشر):</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={homepageContent.heroBannerImage}
+                    onChange={(e) => setHomepageContent({ ...homepageContent, heroBannerImage: e.target.value })}
+                    placeholder="https://images.unsplash.com/... أو رابط الصورة السحابية"
+                    className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono dir-ltr focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+                  />
+                </div>
+
                 <label className="block text-xs font-semibold text-primary-text">
-                  صورة بانر الهيرو (تحميل مباشر من الجهاز بدلاً من رابط URL):
+                  أو رفع صورة جديدة من جهازك مباشرة إلى سحابة التخزين:
                 </label>
 
                 {/* Hidden Native File Input */}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
                   onChange={handleImageFileChange}
                   className="hidden"
                 />
@@ -1003,17 +1038,27 @@ export default function WebsiteContentPage() {
                       اختر صورة عالية الدقة بصيغة JPG أو PNG أو WebP من جهازك
                     </p>
                     <p className="text-[11px] text-secondary-text">
-                      يتم حفظ الصورة محلياً واستعراضها فوراً كخلفية رسمية لواجهة الموقع (بحد أقصى 5 ميجابايت).
+                      يتم رفع الصورة تلقائياً وتعيينها كخلفية رسمية لواجهة الموقع (بحد أقصى 10 ميجابايت).
                     </p>
 
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         type="button"
+                        disabled={isUploadingImage}
                         onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-lg transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
                       >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>تحميل صورة من جهازك</span>
+                        {isUploadingImage ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>جارٍ الرفع...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>تحميل صورة من جهازك</span>
+                          </>
+                        )}
                       </button>
 
                       {homepageContent.heroBannerImage && (
@@ -1040,10 +1085,20 @@ export default function WebsiteContentPage() {
           <div className="pt-3 border-t border-neutral-border-subtle flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs cursor-pointer"
+              disabled={isSavingHomepage || isUploadingImage}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover disabled:opacity-50 rounded-xl shadow-xs cursor-pointer transition-all"
             >
-              <Save className="w-4 h-4" />
-              <span>حفظ محتوى الهيرو</span>
+              {isSavingHomepage ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>جارٍ الحفظ والمزامنة...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>حفظ محتوى الهيرو</span>
+                </>
+              )}
             </button>
           </div>
         </form>

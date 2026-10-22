@@ -76,6 +76,9 @@ function loadCachedState() {
     if (Array.isArray(data.locations) && data.locations.length > 0) locationsState = data.locations;
     if (Array.isArray(data.auditLog)) auditLogState = data.auditLog;
     if (data.currentUser) currentUserObj = data.currentUser;
+    if (data.homepage) homepageState = data.homepage;
+    if (data.contactSettings) contactSettingsState = data.contactSettings;
+    if (data.seo) seoState = data.seo;
     if (data.timestamp && Date.now() - data.timestamp < 1000 * 60 * 60) {
       isInitializedFromBackend = true;
     }
@@ -97,6 +100,9 @@ function saveCachedState() {
       locations: locationsState,
       auditLog: auditLogState,
       currentUser: currentUserObj,
+      homepage: homepageState,
+      contactSettings: contactSettingsState,
+      seo: seoState,
       timestamp: Date.now(),
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -1552,12 +1558,19 @@ export const MockStore = {
 
   async updateHomepageContent(content: Partial<HomepageContent>): Promise<HomepageContent> {
     homepageState = { ...homepageState, ...content };
+    saveCachedState();
     notifyListeners();
 
     try {
-      await apiClient.put("/cms/homepage", homepageState);
+      const res = await apiClient.put("/cms/homepage", homepageState);
+      if (res) {
+        homepageState = { ...homepageState, ...res };
+        saveCachedState();
+        notifyListeners();
+      }
     } catch (err) {
       console.error("Failed to update homepage content on backend:", err);
+      throw err;
     }
     return homepageState;
   },
