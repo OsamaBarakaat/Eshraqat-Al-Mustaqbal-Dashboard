@@ -43,6 +43,14 @@ export interface VisionPillar {
   description: string;
 }
 
+export interface TestimonialItem {
+  id: string;
+  name: string;
+  title: string;
+  content: string;
+  rating: number;
+}
+
 export interface HomepageContent {
   heroTitle: string;
   heroSubtitle: string;
@@ -54,6 +62,10 @@ export interface HomepageContent {
   pillarsTitle?: string;
   pillarsSubtitle?: string;
   pillars?: VisionPillar[];
+  testimonialsBadge?: string;
+  testimonialsTitle?: string;
+  testimonialsSubtitle?: string;
+  testimonials?: TestimonialItem[];
 }
 
 export interface SeoDefaults {

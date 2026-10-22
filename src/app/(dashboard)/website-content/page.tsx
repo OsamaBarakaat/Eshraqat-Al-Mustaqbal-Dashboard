@@ -29,6 +29,8 @@ import {
   Sparkles,
   Loader2,
   Link as LinkIcon,
+  Star,
+  CheckCircle2,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
 import { apiClient } from "@/lib/services/api-client";
@@ -45,9 +47,10 @@ import {
   HomepageContent,
   SeoDefaults,
   VisionPillar,
+  TestimonialItem,
 } from "@/types/content";
 
-type ContentTab = "HOMEPAGE" | "PILLARS" | "CONTACT" | "SOCIAL" | "PAGES" | "FAQS" | "SEO";
+type ContentTab = "HOMEPAGE" | "PILLARS" | "TESTIMONIALS" | "CONTACT" | "SOCIAL" | "PAGES" | "FAQS" | "SEO";
 
 interface DeleteTarget {
   type: "faq" | "social";
@@ -122,6 +125,53 @@ export default function WebsiteContentPage() {
     };
   });
 
+  // Testimonials State (ماذا يقول عملاؤنا ومستثمرونا؟)
+  const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
+  const [testimonialsContent, setTestimonialsContent] = useState<{
+    badge: string;
+    title: string;
+    subtitle: string;
+    testimonials: TestimonialItem[];
+  }>(() => {
+    const hp = MockStore.getHomepageContent();
+    return {
+      badge: hp.testimonialsBadge || "ثقة وشهادات عملائنا",
+      title: hp.testimonialsTitle || "ماذا يقول عملاؤنا ومستثمرونا؟",
+      subtitle:
+        hp.testimonialsSubtitle ||
+        "نفخر بأن نكون الخيار الأول للعائلات والمستثمرين في السوق العقاري السعودي.",
+      testimonials:
+        hp.testimonials && Array.isArray(hp.testimonials) && hp.testimonials.length > 0
+          ? hp.testimonials
+          : [
+              {
+                id: "testimonial-1",
+                name: "م. خالد السبيعي",
+                title: "مالك فيلا مودرن - حي حطين",
+                content:
+                  "تجربة شراء استثنائية من كافة النواحي. الجودة الإنشائية للفيلا وتشطيبات الرخام والمسبح كانت مطابقة تماماً للمواصفات المعروضة، وفريق خدمة العملاء كان متواجداً معنا في كل خطوة حتى الإفراغ الإلكتروني.",
+                rating: 5,
+              },
+              {
+                id: "testimonial-2",
+                name: "عبد العزيز الراجحي",
+                title: "مستثمر في المجمعات التجارية",
+                content:
+                  "استثمرت في مبنى تجاري من تطوير إشراقة المستقبل شمال الرياض، وحققت عائداً إيجارياً سنوياً تجاوز 9.5%. الدراسات الاستثمارية التي يقدمونها تتميز بدقة متناهية والتزام تام بمواعيد التسليم.",
+                rating: 5,
+              },
+              {
+                id: "testimonial-3",
+                name: "د. نورة الشمري",
+                title: "مالكة بنتهاوس - حي العقيق",
+                content:
+                  "إطلالة الروف على أبراج كافد خيالية! النظام الذكي للتحكم بالمنزل والخصوصية في المصعد يعطي شعوراً حقيقياً بالفخامة الفندقية. فخورة بأن تكون هذه بداية مسكني الجديد في الرياض.",
+                rating: 5,
+              },
+            ],
+    };
+  });
+
   // FAQ Add/Edit Modal
   const [faqModal, setFaqModal] = useState<{
     isOpen: boolean;
@@ -182,6 +232,16 @@ export default function WebsiteContentPage() {
             hp.pillarsSubtitle ||
             "نضع الشفافية والجودة الهندسية وراحة العميل في صدارة أولوياتنا منذ مرحلة المخططات الأولى وحتى تسليم المفتاح.",
           pillars: hp.pillars,
+        });
+      }
+      if (hp.testimonials && Array.isArray(hp.testimonials) && hp.testimonials.length > 0) {
+        setTestimonialsContent({
+          badge: hp.testimonialsBadge || "ثقة وشهادات عملائنا",
+          title: hp.testimonialsTitle || "ماذا يقول عملاؤنا ومستثمرونا؟",
+          subtitle:
+            hp.testimonialsSubtitle ||
+            "نفخر بأن نكون الخيار الأول للعائلات والمستثمرين في السوق العقاري السعودي.",
+          testimonials: hp.testimonials,
         });
       }
       setSeoDefaults(MockStore.getSeoDefaults());
@@ -396,6 +456,60 @@ export default function WebsiteContentPage() {
     }
   };
 
+  const handleSaveTestimonials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingTestimonials(true);
+    try {
+      const updated: HomepageContent = {
+        ...homepageContent,
+        testimonialsBadge: testimonialsContent.badge,
+        testimonialsTitle: testimonialsContent.title,
+        testimonialsSubtitle: testimonialsContent.subtitle,
+        testimonials: testimonialsContent.testimonials,
+      };
+      setHomepageContent(updated);
+      await MockStore.updateHomepageContent(updated);
+      success("تم حفظ آراء العملاء والمستثمرين بنجاح", "تم تحديث قسم 'ماذا يقول عملاؤنا ومستثمرونا؟' ومزامنته مع الموقع فوراً.");
+    } catch (err: any) {
+      toastError("تعذر حفظ آراء العملاء", err?.message || "يرجى التحقق من الاتصال بالخادم والمحاولة مجدداً.");
+    } finally {
+      setIsSavingTestimonials(false);
+    }
+  };
+
+  const addTestimonialCard = () => {
+    const newCard: TestimonialItem = {
+      id: `testim-${Date.now()}`,
+      name: "اسم العميل / المستثمر",
+      title: "مالك عقار - الرياض",
+      content: "أضف هنا تفاصيل تجربة العميل ورأيه بالخدمات والجودة الهندسية والمواعيد...",
+      rating: 5,
+    };
+    setTestimonialsContent((prev) => ({
+      ...prev,
+      testimonials: [...prev.testimonials, newCard],
+    }));
+  };
+
+  const removeTestimonialCard = (idx: number) => {
+    if (testimonialsContent.testimonials.length <= 1) {
+      toastError("تنبيه", "يجب الإبقاء على شهادة تقييم واحدة على الأقل في القسم.");
+      return;
+    }
+    setTestimonialsContent((prev) => ({
+      ...prev,
+      testimonials: prev.testimonials.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const updateTestimonialCard = (idx: number, updates: Partial<TestimonialItem>) => {
+    setTestimonialsContent((prev) => {
+      const next = [...prev.testimonials];
+      next[idx] = { ...next[idx], ...updates };
+      return { ...prev, testimonials: next };
+    });
+  };
+
   const handleSaveSeo = (e: React.FormEvent) => {
     e.preventDefault();
     MockStore.updateSeoDefaults(seoDefaults);
@@ -442,6 +556,18 @@ export default function WebsiteContentPage() {
         >
           <Award className="w-4 h-4 text-brand-gold" />
           <span>لماذا يختار النخبة؟ (ركائز التميز)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("TESTIMONIALS")}
+          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+            activeTab === "TESTIMONIALS"
+              ? "bg-brand-charcoal text-brand-gold border border-brand-gold/40 shadow-xs"
+              : "text-secondary-text hover:text-primary-text hover:bg-zinc-100"
+          }`}
+        >
+          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+          <span>آراء العملاء والمستثمرين (الشهادات)</span>
         </button>
 
         <button
@@ -1348,6 +1474,267 @@ export default function WebsiteContentPage() {
             >
               <Save className="w-4 h-4" />
               <span>{isSavingPillars ? "جاري الحفظ..." : "حفظ ومزامنة ركائز التميز"}</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ===================== Tab: Testimonials ("ماذا يقول عملاؤنا ومستثمرونا؟") ===================== */}
+      {activeTab === "TESTIMONIALS" && (
+        <form onSubmit={handleSaveTestimonials} className="p-6 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right space-y-8 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-border-subtle gap-4">
+            <div>
+              <h3 className="font-bold text-base text-primary-text flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                <span>إدارة آراء وشهادات العملاء والمستثمرين (&quot;ماذا يقول عملاؤنا ومستثمرونا؟&quot;)</span>
+              </h3>
+              <p className="text-xs text-secondary-text mt-1">
+                التحكم الكامل بعنوان القسم، الوصف، والبطاقات التقييمية لآراء العملاء والمستثمرين المعروضة على الموقع.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={isSavingTestimonials}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              {isSavingTestimonials ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-brand-charcoal" />
+                  <span>جاري الحفظ...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>حفظ ومزامنة آراء العملاء</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Section Headers Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-primary-text mb-1">
+                شارة القسم الترويجية (Badge):
+              </label>
+              <input
+                type="text"
+                value={testimonialsContent.badge}
+                onChange={(e) => setTestimonialsContent({ ...testimonialsContent, badge: e.target.value })}
+                className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl"
+                placeholder="مثال: ثقة وشهادات عملائنا"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-primary-text mb-1">
+                العنوان الرئيسي للقسم (H2):
+              </label>
+              <input
+                type="text"
+                value={testimonialsContent.title}
+                onChange={(e) => setTestimonialsContent({ ...testimonialsContent, title: e.target.value })}
+                className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-bold"
+                placeholder="مثال: ماذا يقول عملاؤنا ومستثمرونا؟"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-primary-text mb-1">
+                الوصف التمهيدي للقسم:
+              </label>
+              <textarea
+                rows={2}
+                value={testimonialsContent.subtitle}
+                onChange={(e) => setTestimonialsContent({ ...testimonialsContent, subtitle: e.target.value })}
+                className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl"
+                placeholder="نفخر بأن نكون الخيار الأول للعائلات والمستثمرين في السوق العقاري السعودي."
+              />
+            </div>
+          </div>
+
+          {/* Testimonial Cards Management */}
+          <div className="space-y-4 pt-4 border-t border-neutral-border-subtle">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-sm text-primary-text">
+                  بطاقات آراء العملاء والمستثمرين ({testimonialsContent.testimonials.length})
+                </h4>
+                <p className="text-xs text-secondary-text">
+                  يمكنك إضافة تقييمات جديدة وتعديل نصوصها أو تقييم النجوم (1 - 5) لكل عميل.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={addTestimonialCard}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-brand-gold-deep bg-brand-gold-light hover:bg-brand-gold hover:text-brand-charcoal rounded-xl transition-all cursor-pointer shadow-2xs"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>إضافة رأي جديد</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {testimonialsContent.testimonials.map((t, idx) => (
+                <div
+                  key={t.id || idx}
+                  className="p-4 rounded-2xl border border-neutral-border bg-warm-white space-y-3 relative group shadow-2xs"
+                >
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-border-subtle">
+                    <span className="text-xs font-bold font-mono text-secondary-text">
+                      بطاقة رقم #{idx + 1}
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      {/* Star Rating Picker */}
+                      <div className="flex items-center gap-0.5" title="التقييم بالنجوم">
+                        {[1, 2, 3, 4, 5].map((starVal) => (
+                          <button
+                            key={starVal}
+                            type="button"
+                            onClick={() => updateTestimonialCard(idx, { rating: starVal })}
+                            className="p-0.5 hover:scale-110 transition-transform cursor-pointer"
+                          >
+                            <Star
+                              className={`w-3.5 h-3.5 ${
+                                starVal <= (t.rating ?? 5)
+                                  ? "text-amber-500 fill-amber-500"
+                                  : "text-zinc-300"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        type="button"
+                        onClick={() => removeTestimonialCard(idx)}
+                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="حذف هذا الرأي"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-secondary-text mb-1">
+                      اسم العميل / المستثمر:
+                    </label>
+                    <input
+                      type="text"
+                      value={t.name}
+                      onChange={(e) => updateTestimonialCard(idx, { name: e.target.value })}
+                      className="w-full p-2 text-xs bg-surface border border-neutral-border rounded-lg font-bold"
+                      placeholder="مثال: م. خالد السبيعي"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-secondary-text mb-1">
+                      الصفة أو نوع العقار:
+                    </label>
+                    <input
+                      type="text"
+                      value={t.title}
+                      onChange={(e) => updateTestimonialCard(idx, { title: e.target.value })}
+                      className="w-full p-2 text-xs bg-surface border border-neutral-border rounded-lg text-brand-gold-deep font-medium"
+                      placeholder="مثال: مالك فيلا مودرن - حي حطين"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-secondary-text mb-1">
+                      نص الشهادة / التقييم:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={t.content}
+                      onChange={(e) => updateTestimonialCard(idx, { content: e.target.value })}
+                      className="w-full p-2 text-xs bg-surface border border-neutral-border rounded-lg leading-relaxed"
+                      placeholder="تجربة شراء استثنائية من كافة النواحي..."
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Interactive Live Preview */}
+          <div className="p-6 rounded-2xl bg-[#0D0D10] text-white border border-brand-gold/30 space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <span className="text-xs font-bold text-brand-gold flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                معاينة حية لشكل القسم كما يظهر على الموقع الإلكتروني:
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-brand-gold/20 text-brand-gold border border-brand-gold/40">
+                Live Luxury Preview
+              </span>
+            </div>
+
+            <div className="text-center max-w-xl mx-auto space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 text-[11px] font-semibold">
+                <Star className="w-3.5 h-3.5 fill-current" />
+                <span>{testimonialsContent.badge}</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-white">
+                {testimonialsContent.title}
+              </h3>
+              <p className="text-xs text-zinc-400 font-light leading-relaxed">
+                {testimonialsContent.subtitle}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+              {testimonialsContent.testimonials.map((t, tIdx) => (
+                <div
+                  key={tIdx}
+                  className="p-5 rounded-2xl bg-[#141418] border border-white/5 space-y-4 flex flex-col justify-between shadow-lg"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1 text-[#C5A059]">
+                      {Array.from({ length: t.rating ?? 5 }).map((_, i) => (
+                        <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-zinc-300 leading-relaxed font-light italic">
+                      &quot;{t.content}&quot;
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{t.name}</h4>
+                      <span className="text-[10px] text-[#C5A059] font-medium">{t.title}</span>
+                    </div>
+                    <div className="w-7 h-7 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingTestimonials}
+              className="inline-flex items-center gap-2 px-6 py-3 text-xs sm:text-sm font-bold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {isSavingTestimonials ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-brand-charcoal" />
+                  <span>جاري الحفظ...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>حفظ ومزامنة آراء العملاء</span>
+                </>
+              )}
             </button>
           </div>
         </form>
