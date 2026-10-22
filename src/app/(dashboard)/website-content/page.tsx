@@ -21,6 +21,12 @@ import {
   CornerDownLeft,
   Eye,
   Lock,
+  Award,
+  Building2,
+  ShieldCheck,
+  Cpu,
+  Banknote,
+  Sparkles,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
 import { PageHeader } from "@/components/layout/page-header";
@@ -35,9 +41,10 @@ import {
   SocialLink,
   HomepageContent,
   SeoDefaults,
+  VisionPillar,
 } from "@/types/content";
 
-type ContentTab = "FAQS" | "PAGES" | "CONTACT" | "SOCIAL" | "HOMEPAGE" | "SEO";
+type ContentTab = "HOMEPAGE" | "PILLARS" | "CONTACT" | "SOCIAL" | "PAGES" | "FAQS" | "SEO";
 
 interface DeleteTarget {
   type: "faq" | "social";
@@ -48,7 +55,7 @@ interface DeleteTarget {
 export default function WebsiteContentPage() {
   const { success, error: toastError } = useToast();
 
-  const [activeTab, setActiveTab] = useState<ContentTab>("FAQS");
+  const [activeTab, setActiveTab] = useState<ContentTab>("HOMEPAGE");
 
   // Content States from Store
   const [faqs, setFaqs] = useState<FAQ[]>(MockStore.getFaqs());
@@ -57,6 +64,57 @@ export default function WebsiteContentPage() {
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(MockStore.getSocialLinks());
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(MockStore.getHomepageContent());
   const [seoDefaults, setSeoDefaults] = useState<SeoDefaults>(MockStore.getSeoDefaults());
+
+  // Vision Pillars State (لماذا يختار النخبة؟)
+  const [isSavingPillars, setIsSavingPillars] = useState(false);
+  const [pillarsContent, setPillarsContent] = useState<{
+    badge: string;
+    title: string;
+    subtitle: string;
+    pillars: VisionPillar[];
+  }>(() => {
+    const hp = MockStore.getHomepageContent();
+    return {
+      badge: hp.pillarsBadge || "ركائز التميز المؤسسي",
+      title: hp.pillarsTitle || 'لماذا يختار النخبة "إشراقة المستقبل"؟',
+      subtitle:
+        hp.pillarsSubtitle ||
+        "نضع الشفافية والجودة الهندسية وراحة العميل في صدارة أولوياتنا منذ مرحلة المخططات الأولى وحتى تسليم المفتاح.",
+      pillars:
+        hp.pillars && hp.pillars.length === 4
+          ? hp.pillars
+          : [
+              {
+                id: "pillar-1",
+                icon: "Building2",
+                title: "معايير معمارية استثنائية",
+                description:
+                  "تصاميم عصرية مستوحاة من العمارة السلمانية الحديثة بأعلى معايير الإضاءة الطبيعية والواجهات الزجاجية العازلة للصوت والحرارة.",
+              },
+              {
+                id: "pillar-2",
+                icon: "ShieldCheck",
+                title: "صكوك إلكترونية وضمانات شاملة",
+                description:
+                  "صكوك ملكية إلكترونية فورية مرخصة، مع ضمانات تصل إلى 10 سنوات على الهيكل الإنشائي والعوازل وتركيبات السباكة والكهرباء.",
+              },
+              {
+                id: "pillar-3",
+                icon: "Cpu",
+                title: "تقنيات Smart Home ذكية",
+                description:
+                  "تكامل ذكي كامل للتحكم بالتكييف والإضاءة والمداخل والمسابح عبر تطبيقات الهواتف الذكية مع نظام توفير الطاقة الصديق للبيئة.",
+              },
+              {
+                id: "pillar-4",
+                icon: "Banknote",
+                title: "عوائد استثمارية متنامية",
+                description:
+                  "دراسات جدوى متخصصة للمواقع الواعدة تضمن للمستثمر عوائد إيجارية مجزية وارتفاعاً مستمراً في القيمة الرأسمالية للعقار.",
+              },
+            ],
+    };
+  });
 
   // FAQ Add/Edit Modal
   const [faqModal, setFaqModal] = useState<{
@@ -108,7 +166,18 @@ export default function WebsiteContentPage() {
       setPages(MockStore.getPages());
       setContactSettings(MockStore.getContactSettings());
       setSocialLinks(MockStore.getSocialLinks());
-      setHomepageContent(MockStore.getHomepageContent());
+      const hp = MockStore.getHomepageContent();
+      setHomepageContent(hp);
+      if (hp.pillars && Array.isArray(hp.pillars) && hp.pillars.length === 4) {
+        setPillarsContent({
+          badge: hp.pillarsBadge || "ركائز التميز المؤسسي",
+          title: hp.pillarsTitle || 'لماذا يختار النخبة "إشراقة المستقبل"؟',
+          subtitle:
+            hp.pillarsSubtitle ||
+            "نضع الشفافية والجودة الهندسية وراحة العميل في صدارة أولوياتنا منذ مرحلة المخططات الأولى وحتى تسليم المفتاح.",
+          pillars: hp.pillars,
+        });
+      }
       setSeoDefaults(MockStore.getSeoDefaults());
     });
     return unsubscribe;
@@ -266,10 +335,31 @@ export default function WebsiteContentPage() {
     success("تم تحديث حالة الرابط", "تم تفعيل / تعطيل ظهور الرابط على الموقع.");
   };
 
-  const handleSaveHomepage = (e: React.FormEvent) => {
+  const handleSaveHomepage = async (e: React.FormEvent) => {
     e.preventDefault();
-    MockStore.updateHomepageContent(homepageContent);
-    success("تم تحديث نصوص الصفحة الرئيسية", "تم حفظ إعدادات الهيرو والعناوين الترويجية.");
+    await MockStore.updateHomepageContent(homepageContent);
+    success("تم تحديث نصوص الصفحة الرئيسية", "تم حفظ إعدادات الهيرو والعناوين الترويجية ومزامنتها بنجاح.");
+  };
+
+  const handleSavePillars = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPillars(true);
+    try {
+      const updated: HomepageContent = {
+        ...homepageContent,
+        pillarsBadge: pillarsContent.badge,
+        pillarsTitle: pillarsContent.title,
+        pillarsSubtitle: pillarsContent.subtitle,
+        pillars: pillarsContent.pillars,
+      };
+      setHomepageContent(updated);
+      await MockStore.updateHomepageContent(updated);
+      success("تم حفظ ركائز التميز بنجاح", "تم تحديث محتوى قسم 'لماذا يختار النخبة' ومزامنته مع الموقع فوراً.");
+    } catch {
+      toastError("تعذر حفظ ركائز التميز", "يرجى التحقق من الاتصال بالخادم والمحاولة مجدداً.");
+    } finally {
+      setIsSavingPillars(false);
+    }
   };
 
   const handleSaveSeo = (e: React.FormEvent) => {
@@ -297,27 +387,27 @@ export default function WebsiteContentPage() {
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-neutral-border pb-1 overflow-x-auto">
         <button
-          onClick={() => setActiveTab("FAQS")}
+          onClick={() => setActiveTab("HOMEPAGE")}
           className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
-            activeTab === "FAQS"
+            activeTab === "HOMEPAGE"
               ? "bg-brand-charcoal text-white shadow-xs"
               : "text-secondary-text hover:text-primary-text hover:bg-zinc-100"
           }`}
         >
-          <HelpCircle className="w-4 h-4" />
-          <span>الأسئلة الشائعة (FAQ)</span>
+          <Layout className="w-4 h-4" />
+          <span>الواجهة الرئيسية (Hero Banner)</span>
         </button>
 
         <button
-          onClick={() => setActiveTab("PAGES")}
+          onClick={() => setActiveTab("PILLARS")}
           className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
-            activeTab === "PAGES"
-              ? "bg-brand-charcoal text-white shadow-xs"
+            activeTab === "PILLARS"
+              ? "bg-brand-charcoal text-brand-gold border border-brand-gold/40 shadow-xs"
               : "text-secondary-text hover:text-primary-text hover:bg-zinc-100"
           }`}
         >
-          <FileText className="w-4 h-4" />
-          <span>السياسات والشروط المنسقة</span>
+          <Award className="w-4 h-4 text-brand-gold" />
+          <span>لماذا يختار النخبة؟ (ركائز التميز)</span>
         </button>
 
         <button
@@ -345,15 +435,27 @@ export default function WebsiteContentPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("HOMEPAGE")}
+          onClick={() => setActiveTab("PAGES")}
           className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
-            activeTab === "HOMEPAGE"
+            activeTab === "PAGES"
               ? "bg-brand-charcoal text-white shadow-xs"
               : "text-secondary-text hover:text-primary-text hover:bg-zinc-100"
           }`}
         >
-          <Layout className="w-4 h-4" />
-          <span>الواجهة الرئيسية (Hero Banner)</span>
+          <FileText className="w-4 h-4" />
+          <span>السياسات والشروط المنسقة</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("FAQS")}
+          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+            activeTab === "FAQS"
+              ? "bg-brand-charcoal text-white shadow-xs"
+              : "text-secondary-text hover:text-primary-text hover:bg-zinc-100"
+          }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>الأسئلة الشائعة (FAQ)</span>
         </button>
 
         <button
@@ -942,6 +1044,245 @@ export default function WebsiteContentPage() {
             >
               <Save className="w-4 h-4" />
               <span>حفظ محتوى الهيرو</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ===================== Tab: Vision Pillars ("لماذا يختار النخبة؟") ===================== */}
+      {activeTab === "PILLARS" && (
+        <form onSubmit={handleSavePillars} className="p-6 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right space-y-8 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-border-subtle gap-4">
+            <div>
+              <h3 className="font-bold text-base text-primary-text flex items-center gap-2">
+                <Award className="w-5 h-5 text-brand-gold" />
+                <span>إدارة ركائز التميز المؤسسي (&quot;لماذا يختار النخبة إشراقة المستقبل؟&quot;)</span>
+              </h3>
+              <p className="text-xs text-secondary-text mt-1">
+                التحكم الكامل بالعنوان الرئيسي، الوصف التمهيدي، والأربع ركائز الاستراتيجية المعروضة على الصفحة الرئيسية.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={isSavingPillars}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSavingPillars ? "جاري الحفظ..." : "حفظ ومزامنة ركائز التميز"}</span>
+            </button>
+          </div>
+
+          {/* Section Headers Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-primary-text mb-1">
+                شارة القسم الترويجية (Badge):
+              </label>
+              <input
+                type="text"
+                value={pillarsContent.badge}
+                onChange={(e) => setPillarsContent({ ...pillarsContent, badge: e.target.value })}
+                className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl"
+                placeholder="مثال: ركائز التميز المؤسسي"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-primary-text mb-1">
+                العنوان الرئيسي للقسم (H2):
+              </label>
+              <input
+                type="text"
+                value={pillarsContent.title}
+                onChange={(e) => setPillarsContent({ ...pillarsContent, title: e.target.value })}
+                className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-bold"
+                placeholder='مثال: لماذا يختار النخبة "إشراقة المستقبل"؟'
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-primary-text mb-1">
+                الوصف والتمهيد الاستراتيجي للقسم:
+              </label>
+              <textarea
+                rows={2}
+                value={pillarsContent.subtitle}
+                onChange={(e) => setPillarsContent({ ...pillarsContent, subtitle: e.target.value })}
+                className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl"
+                placeholder="نضع الشفافية والجودة الهندسية وراحة العميل في صدارة أولوياتنا..."
+              />
+            </div>
+          </div>
+
+          {/* 4 Pillars Cards Grid */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-sm text-primary-text border-b border-neutral-border-subtle pb-2">
+              النقاط الأربع الرئيسية (The 4 Pillars):
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {pillarsContent.pillars.map((pillar, idx) => {
+                const iconOptions = [
+                  { id: "Building2", label: "معمارية / مباني", icon: Building2 },
+                  { id: "ShieldCheck", label: "صكوك وضمانات", icon: ShieldCheck },
+                  { id: "Cpu", label: "تقنيات Smart Home", icon: Cpu },
+                  { id: "Banknote", label: "عوائد واستثمار", icon: Banknote },
+                  { id: "Award", label: "تميز وجودة", icon: Award },
+                  { id: "Sparkles", label: "فخامة وعصرية", icon: Sparkles },
+                ];
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-5 rounded-2xl bg-warm-white/70 border border-neutral-border hover:border-brand-gold/60 transition-all space-y-4 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-neutral-border-subtle">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-charcoal text-white">
+                        الركيزة #{idx + 1}
+                      </span>
+                      <span className="text-[11px] text-secondary-text">
+                        تعديل العنوان والجملة والأيقونة
+                      </span>
+                    </div>
+
+                    {/* Icon Selection */}
+                    <div>
+                      <label className="block text-xs font-semibold text-primary-text mb-1.5">
+                        الأيقونة الرمزية:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {iconOptions.map((opt) => {
+                          const IconComp = opt.icon;
+                          const isSelected = pillar.icon === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                const next = [...pillarsContent.pillars];
+                                next[idx] = { ...next[idx], icon: opt.id };
+                                setPillarsContent({ ...pillarsContent, pillars: next });
+                              }}
+                              className={`p-2 rounded-xl border text-xs flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-brand-charcoal text-white border-brand-gold shadow-xs"
+                                  : "bg-surface text-secondary-text border-neutral-border hover:bg-zinc-100"
+                              }`}
+                            >
+                              <IconComp className={`w-4 h-4 ${isSelected ? "text-brand-gold" : ""}`} />
+                              <span className="text-[10px] truncate max-w-[80px]">{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <label className="block text-xs font-semibold text-primary-text mb-1">
+                        عنوان النقطة:
+                      </label>
+                      <input
+                        type="text"
+                        value={pillar.title}
+                        onChange={(e) => {
+                          const next = [...pillarsContent.pillars];
+                          next[idx] = { ...next[idx], title: e.target.value };
+                          setPillarsContent({ ...pillarsContent, pillars: next });
+                        }}
+                        className="w-full p-2.5 text-xs sm:text-sm bg-surface border border-neutral-border rounded-xl font-bold"
+                        placeholder="مثال: معايير معمارية استثنائية"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-xs font-semibold text-primary-text mb-1">
+                        الجملة / الوصف التفصيلي:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={pillar.description}
+                        onChange={(e) => {
+                          const next = [...pillarsContent.pillars];
+                          next[idx] = { ...next[idx], description: e.target.value };
+                          setPillarsContent({ ...pillarsContent, pillars: next });
+                        }}
+                        className="w-full p-2.5 text-xs sm:text-sm bg-surface border border-neutral-border rounded-xl leading-relaxed"
+                        placeholder="تصاميم عصرية مستوحاة من العمارة السلمانية..."
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Interactive Live Preview */}
+          <div className="p-6 rounded-2xl bg-[#09090B] text-white border border-brand-gold/30 space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <span className="text-xs font-bold text-brand-gold flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                معاينة حية لشكل القسم كما يظهر على الموقع الإلكتروني:
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-brand-gold/20 text-brand-gold border border-brand-gold/40">
+                Live Preview
+              </span>
+            </div>
+
+            <div className="text-center max-w-xl mx-auto space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 text-[11px] font-semibold">
+                <Award className="w-3.5 h-3.5" />
+                <span>{pillarsContent.badge}</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-white">
+                {pillarsContent.title}
+              </h3>
+              <p className="text-xs text-zinc-400 font-light leading-relaxed">
+                {pillarsContent.subtitle}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              {pillarsContent.pillars.map((p, pIdx) => {
+                const getIcon = (name: string) => {
+                  switch (name) {
+                    case "Building2":
+                      return Building2;
+                    case "ShieldCheck":
+                      return ShieldCheck;
+                    case "Cpu":
+                      return Cpu;
+                    case "Banknote":
+                      return Banknote;
+                    case "Sparkles":
+                      return Sparkles;
+                    default:
+                      return Award;
+                  }
+                };
+                const PkIcon = getIcon(p.icon);
+                return (
+                  <div key={pIdx} className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/30 flex items-center justify-center">
+                      <PkIcon className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-bold text-white">{p.title}</h4>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed font-light">{p.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingPillars}
+              className="inline-flex items-center gap-2 px-6 py-3 text-xs sm:text-sm font-bold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSavingPillars ? "جاري الحفظ..." : "حفظ ومزامنة ركائز التميز"}</span>
             </button>
           </div>
         </form>

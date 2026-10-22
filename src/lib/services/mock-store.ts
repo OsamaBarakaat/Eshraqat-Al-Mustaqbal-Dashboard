@@ -1550,13 +1550,15 @@ export const MockStore = {
     return { ...homepageState };
   },
 
-  updateHomepageContent(content: Partial<HomepageContent>): HomepageContent {
+  async updateHomepageContent(content: Partial<HomepageContent>): Promise<HomepageContent> {
     homepageState = { ...homepageState, ...content };
     notifyListeners();
 
-    apiClient.put("/cms/homepage", homepageState).catch((err) => {
+    try {
+      await apiClient.put("/cms/homepage", homepageState);
+    } catch (err) {
       console.error("Failed to update homepage content on backend:", err);
-    });
+    }
     return homepageState;
   },
 

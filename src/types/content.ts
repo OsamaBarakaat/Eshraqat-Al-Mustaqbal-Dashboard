@@ -36,6 +36,13 @@ export interface SocialLink {
   enabled: boolean;
 }
 
+export interface VisionPillar {
+  id?: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
 export interface HomepageContent {
   heroTitle: string;
   heroSubtitle: string;
@@ -43,6 +50,10 @@ export interface HomepageContent {
   ctaLink: string;
   heroBannerImage: string;
   badgeText: string;
+  pillarsBadge?: string;
+  pillarsTitle?: string;
+  pillarsSubtitle?: string;
+  pillars?: VisionPillar[];
 }
 
 export interface SeoDefaults {
