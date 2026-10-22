@@ -986,24 +986,10 @@ export default function WebsiteContentPage() {
                 />
               </div>
 
-              {/* Hero Banner Image: Direct URL + Local File Upload */}
+              {/* Hero Banner Image: Upload from device only */}
               <div className="sm:col-span-2 space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-primary-text mb-1 flex items-center gap-1.5">
-                    <LinkIcon className="w-3.5 h-3.5 text-brand-gold" />
-                    <span>رابط صورة بانر الهيرو (URL مباشر):</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={homepageContent.heroBannerImage}
-                    onChange={(e) => setHomepageContent({ ...homepageContent, heroBannerImage: e.target.value })}
-                    placeholder="https://images.unsplash.com/... أو رابط الصورة السحابية"
-                    className="w-full p-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono dir-ltr focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
-                  />
-                </div>
-
                 <label className="block text-xs font-semibold text-primary-text">
-                  أو رفع صورة جديدة من جهازك مباشرة إلى سحابة التخزين:
+                  صورة بانر الهيرو (واجهة الموقع):
                 </label>
 
                 {/* Hidden Native File Input */}
@@ -1017,28 +1003,23 @@ export default function WebsiteContentPage() {
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl border border-dashed border-neutral-border bg-warm-white">
                   {/* Image Preview */}
-                  <div className="w-full sm:w-48 h-28 rounded-lg overflow-hidden border border-neutral-border bg-zinc-100 flex items-center justify-center shrink-0 relative group">
-                    {homepageContent.heroBannerImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={homepageContent.heroBannerImage}
-                        alt="Hero Banner Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-secondary-text gap-1">
-                        <ImageIcon className="w-8 h-8 text-zinc-400" />
-                        <span className="text-[11px]">لا توجد صورة</span>
-                      </div>
-                    )}
+                  <div className="w-full sm:w-56 h-32 rounded-lg overflow-hidden border border-neutral-border bg-zinc-100 flex items-center justify-center shrink-0 relative group">
+                    <img
+                      src={
+                        homepageContent.heroBannerImage ||
+                        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"
+                      }
+                      alt="Hero Banner Preview"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <div className="space-y-2 flex-1 text-right">
                     <p className="text-xs text-primary-text font-semibold">
-                      اختر صورة عالية الدقة بصيغة JPG أو PNG أو WebP من جهازك
+                      رفع صورة مخصصة للهيرو من جهازك (JPG, PNG, WebP)
                     </p>
                     <p className="text-[11px] text-secondary-text">
-                      يتم رفع الصورة تلقائياً وتعيينها كخلفية رسمية لواجهة الموقع (بحد أقصى 10 ميجابايت).
+                      يمكنك اختيار أي صورة تريدها ليتم رفعها وتثبيتها كخلفية رسمية لواجهة الموقع (الحد الأقصى 10 ميجابايت). وفي حال إزالة الصورة سيتم استرجاع الصورة الافتراضية تلقائياً.
                     </p>
 
                     <div className="flex items-center gap-2 pt-1">
@@ -1051,30 +1032,33 @@ export default function WebsiteContentPage() {
                         {isUploadingImage ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>جارٍ الرفع...</span>
+                            <span>جارٍ رفع الصورة...</span>
                           </>
                         ) : (
                           <>
                             <Upload className="w-3.5 h-3.5" />
-                            <span>تحميل صورة من جهازك</span>
+                            <span>اختيار صورة جديدة من جهازك</span>
                           </>
                         )}
                       </button>
 
-                      {homepageContent.heroBannerImage && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setHomepageContent((prev) => ({
-                              ...prev,
-                              heroBannerImage: "",
-                            }))
-                          }
-                          className="px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        >
-                          إزالة الصورة
-                        </button>
-                      )}
+                      {homepageContent.heroBannerImage &&
+                        homepageContent.heroBannerImage !==
+                          "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setHomepageContent((prev) => ({
+                                ...prev,
+                                heroBannerImage:
+                                  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
+                              }))
+                            }
+                            className="px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-rose-200"
+                          >
+                            استعادة الصورة الافتراضية
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
