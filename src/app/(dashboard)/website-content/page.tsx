@@ -317,17 +317,22 @@ export default function WebsiteContentPage() {
     try {
       const res = await apiClient.uploadFile(file, "banners");
       if (res?.url) {
-        setHomepageContent((prev) => ({
-          ...prev,
+        const updatedHomepage = {
+          ...homepageContent,
           heroBannerImage: res.url,
-        }));
-        success("تم رفع الصورة بنجاح", "تم رفع الصورة إلى سحابة التخزين وتعيينها كبانر للهيرو.");
+        };
+        setHomepageContent(updatedHomepage);
+
+        // Auto-persist immediately to database and cache so it survives refresh!
+        await MockStore.updateHomepageContent(updatedHomepage);
+
+        success("تم رفع وحفظ صورة الهيرو بنجاح", "تم تثبيت الصورة رسمياً كبانر للهيرو ومزامنتها مع الموقع.");
       } else {
         throw new Error("لم يتم إرجاع رابط الصورة من الخادم");
       }
     } catch (err: any) {
       console.error("Image upload failed:", err);
-      toastError("تعذر رفع ملف الصورة", err?.message || "تأكد من الاتصال بالخادم أو أدخل رابط الصورة المباشر في خانة الرابط.");
+      toastError("تعذر رفع ملف الصورة", err?.message || "تأكد من الاتصال بالخادم والمحاولة مجدداً.");
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1065,13 +1070,16 @@ export default function WebsiteContentPage() {
                           "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80" && (
                           <button
                             type="button"
-                            onClick={() =>
-                              setHomepageContent((prev) => ({
-                                ...prev,
+                            onClick={async () => {
+                              const reset = {
+                                ...homepageContent,
                                 heroBannerImage:
                                   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
-                              }))
-                            }
+                              };
+                              setHomepageContent(reset);
+                              await MockStore.updateHomepageContent(reset);
+                              success("تمت استعادة الصورة الافتراضية", "تم حفظ وتعيين الصورة الافتراضية للهيرو.");
+                            }}
                             className="px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-rose-200"
                           >
                             استعادة الصورة الافتراضية
