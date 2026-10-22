@@ -136,9 +136,23 @@ class ApiClient {
   }
 
   async uploadMultipleFiles(files: File[], folder = "properties"): Promise<Array<{ url: string; filename: string }>> {
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    return this.post<Array<{ url: string; filename: string }>>(`/media/upload-multiple?folder=${folder}`, formData);
+    if (!files || files.length === 0) return [];
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+      const res = await this.post<Array<{ url: string; filename: string }>>(`/media/upload-multiple?folder=${folder}`, formData);
+      if (Array.isArray(res) && res.length > 0) {
+        return res;
+      }
+    } catch (batchErr) {
+      console.warn("Batch upload failed or unsupported, trying individual uploads:", batchErr);
+    }
+
+    // Fallback: Upload files in parallel via individual endpoint
+    const results = await Promise.allSettled(files.map((file) => this.uploadFile(file, folder)));
+    return results
+      .map((r) => (r.status === "fulfilled" ? r.value : null))
+      .filter((r): r is { url: string; filename: string } => r !== null && Boolean(r.url));
   }
 }
 

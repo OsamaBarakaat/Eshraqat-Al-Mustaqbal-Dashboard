@@ -227,15 +227,13 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
       if (res?.url) {
         setValue("primaryImageUrl", res.url, { shouldValidate: true });
         success("تم رفع صورة الغلاف بنجاح", "تم حفظ صورة الغلاف في التخزين السحابي.");
+      } else {
+        throw new Error("لم يتم إرجاع رابط الصورة");
       }
     } catch (err: any) {
-      console.warn("Media upload to backend failed, falling back to local data URL:", err);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setValue("primaryImageUrl", reader.result as string, { shouldValidate: true });
-      };
-      reader.readAsDataURL(file);
-      success("تم اختيار صورة الغلاف", "تم اعتماد صورة الغلاف محلياً.");
+      console.error("Cover image upload failed:", err);
+      setValue("primaryImageUrl", initialData?.images?.find((i) => i.isPrimary)?.url || "", { shouldValidate: true });
+      toastError("فشل رفع صورة الغلاف", "تعذر رفع صورة الغلاف إلى السحابة، يرجى المحاولة مرة أخرى.");
     } finally {
       setIsUploadingCover(false);
       e.target.value = "";
@@ -281,29 +279,29 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
       const uploadRes = await apiClient.uploadMultipleFiles(validFiles, "properties");
       if (uploadRes && Array.isArray(uploadRes) && uploadRes.length > 0) {
         setGalleryImages((prev) =>
-          prev.map((img) => {
-            const idx = tempIds.indexOf(img.id);
-            if (idx !== -1 && uploadRes[idx]?.url) {
-              return { ...img, id: `img-${Date.now()}-${idx}`, url: uploadRes[idx].url };
-            }
-            return img;
-          })
+          prev
+            .map((img) => {
+              const idx = tempIds.indexOf(img.id);
+              if (idx !== -1) {
+                if (uploadRes[idx]?.url) {
+                  return { ...img, id: `img-${Date.now()}-${idx}`, url: uploadRes[idx].url };
+                }
+                // Drop items in the batch that failed to produce a valid URL
+                return null;
+              }
+              return img;
+            })
+            .filter((img): img is PropertyImage => img !== null)
         );
         success("تم رفع الصور بنجاح", `تم رفع ${uploadRes.length} صور إلى التخزين السحابي.`);
+      } else {
+        throw new Error("لم يتم إرجاع روابط الصور من السيرفر");
       }
     } catch (err: any) {
-      console.warn("Gallery upload to backend failed, falling back to local data URLs:", err);
-      validFiles.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const res = reader.result as string;
-          setGalleryImages((prev) =>
-            prev.map((img) => (img.id === tempIds[index] ? { ...img, url: res } : img))
-          );
-        };
-        reader.readAsDataURL(file);
-      });
-      success("تمت إضافة الصور", `تمت إضافة ${validFiles.length} صور إلى المعرض.`);
+      console.error("Gallery upload to backend failed:", err);
+      // Remove temporary blob previews on failure to prevent saving invalid URLs
+      setGalleryImages((prev) => prev.filter((img) => !tempIds.includes(img.id)));
+      toastError("فشل رفع الصور", "تعذر رفع الصور إلى التخزين السحابي، يرجى المحاولة مرة أخرى.");
     } finally {
       setIsUploadingGallery(false);
       e.target.value = "";
@@ -398,16 +396,21 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     }
   };
 
-  const onSubmit = (data: PropertyFormValues, statusOverride?: PropertyStatus) => {
+  const onSubmit = async (data: PropertyFormValues, statusOverride?: PropertyStatus) => {
+    if (isUploadingCover || isUploadingGallery) {
+      toastError("يرجى الانتظار", "جاري رفع الصور حالياً، يرجى الانتظار حتى اكتمال الرفع قبل الحفظ.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const finalStatus = statusOverride || data.status;
 
-      // Construct complete images array
+      // Construct complete images array (exclude raw temporary blob: URLs)
       const finalImages: PropertyImage[] = [];
 
       // 1. Primary Cover Image
-      if (data.primaryImageUrl) {
+      if (data.primaryImageUrl && !data.primaryImageUrl.startsWith("blob:")) {
         finalImages.push({
           id: initialData?.images?.find((img) => img.isPrimary)?.id || `img-primary-${Date.now()}`,
           url: data.primaryImageUrl,
@@ -417,13 +420,15 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
       }
 
       // 2. Additional Gallery Images
-      galleryImages.forEach((img, idx) => {
-        finalImages.push({
-          ...img,
-          id: img.id || `img-gallery-${idx}-${Date.now()}`,
-          isPrimary: false,
+      galleryImages
+        .filter((img) => !img.url.startsWith("blob:"))
+        .forEach((img, idx) => {
+          finalImages.push({
+            ...img,
+            id: img.id || `img-gallery-${idx}-${Date.now()}`,
+            isPrimary: false,
+          });
         });
-      });
 
       // 3. Fallback default if empty
       if (finalImages.length === 0) {
@@ -504,14 +509,15 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
       };
 
       if (isEditing && initialData) {
-        MockStore.updateProperty(initialData.id, propertyPayload);
+        await MockStore.updateProperty(initialData.id, propertyPayload);
         success("تم تحديث العقار بنجاح", `تم حفظ التغييرات على العقار (${data.code}).`);
       } else {
-        MockStore.addProperty(propertyPayload);
+        await MockStore.addProperty(propertyPayload);
         success("تمت إضافة العقار بنجاح", `تم تسجيل العقار الجديد (${data.code}) في قاعدة البيانات.`);
       }
 
       router.push("/properties");
+      router.refresh();
     } catch {
       toastError("خطأ", "حدث خطأ أثناء حفظ بيانات العقار.");
     } finally {
@@ -1192,6 +1198,15 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
                 alt="صورة الغلاف الرئيسية"
                 className="w-full h-56 sm:h-72 object-cover transition-transform duration-300 group-hover:scale-[1.01]"
               />
+
+              {/* Uploading Spinner Overlay */}
+              {isUploadingCover && (
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 z-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-brand-gold" />
+                  <span className="text-xs font-semibold">جاري رفع صورة الغلاف إلى التخزين السحابي...</span>
+                </div>
+              )}
+
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent flex flex-col justify-between p-4">
                 <div className="flex justify-end">
                   <span className="px-3 py-1 rounded-xl bg-black/60 backdrop-blur-xs text-white text-xs font-semibold flex items-center gap-1.5 border border-white/10">
@@ -1342,6 +1357,15 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
                     <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] font-mono">
                       #{idx + 1}
                     </span>
+
+                    {/* Gallery Item Uploading Spinner */}
+                    {(img.url.startsWith("blob:") || img.id.startsWith("temp-")) && (
+                      <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-1 z-10">
+                        <Loader2 className="w-5 h-5 animate-spin text-brand-gold" />
+                        <span className="text-[10px] font-medium">جاري الرفع...</span>
+                      </div>
+                    )}
+
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
                       <button
                         type="button"
@@ -1446,9 +1470,9 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingCover || isUploadingGallery}
             onClick={handleSubmit((data) => onSubmit(data, "DRAFT"))}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs sm:text-sm font-semibold text-primary-text bg-zinc-100 hover:bg-zinc-200 rounded-xl transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs sm:text-sm font-semibold text-primary-text bg-zinc-100 hover:bg-zinc-200 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Save className="w-4 h-4 text-secondary-text" />
             <span>حفظ كمسودة</span>
@@ -1456,11 +1480,25 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs shadow-brand-gold/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            disabled={isSubmitting || isUploadingCover || isUploadingGallery}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-brand-charcoal bg-brand-gold hover:bg-brand-gold-hover rounded-xl shadow-xs shadow-brand-gold/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
           >
-            <CheckCircle className="w-4 h-4" />
-            <span>{isEditing ? "حفظ التعديلات" : "نشر العقار الآن"}</span>
+            {isUploadingCover || isUploadingGallery ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-brand-charcoal" />
+                <span>جاري رفع الصور...</span>
+              </>
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-brand-charcoal" />
+                <span>جاري الحفظ...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>{isEditing ? "حفظ التعديلات" : "نشر العقار الآن"}</span>
+              </>
+            )}
           </button>
         </div>
       </div>

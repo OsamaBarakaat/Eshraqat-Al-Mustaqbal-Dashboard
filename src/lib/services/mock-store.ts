@@ -612,7 +612,7 @@ export const MockStore = {
     return propertiesState.find((p) => p.id === id || p.code === id);
   },
 
-  addProperty(property: Omit<Property, "id" | "createdAt" | "updatedAt" | "viewsCount" | "inquiriesCount">): Property {
+  async addProperty(property: Omit<Property, "id" | "createdAt" | "updatedAt" | "viewsCount" | "inquiriesCount">): Promise<Property> {
     const tempId = `prop-${Date.now()}`;
     const newProperty: Property = {
       ...property,
@@ -634,25 +634,23 @@ export const MockStore = {
     });
     notifyListeners();
 
-    // Async call to live backend
-    const payload = mapDashboardPropertyToBackend(property);
-    apiClient
-      .post("/properties", payload)
-      .then((created) => {
-        if (created?.id) {
-          const mapped = mapBackendPropertyToDashboard(created);
-          propertiesState = propertiesState.map((p) => (p.id === tempId ? mapped : p));
-          notifyListeners();
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to persist property to backend:", err);
-      });
+    try {
+      const payload = mapDashboardPropertyToBackend(property);
+      const created = await apiClient.post("/properties", payload);
+      if (created?.id) {
+        const mapped = mapBackendPropertyToDashboard(created);
+        propertiesState = propertiesState.map((p) => (p.id === tempId ? mapped : p));
+        notifyListeners();
+        return mapped;
+      }
+    } catch (err) {
+      console.error("Failed to persist property to backend:", err);
+    }
 
     return newProperty;
   },
 
-  updateProperty(id: string, updates: Partial<Property>): Property | null {
+  async updateProperty(id: string, updates: Partial<Property>): Promise<Property | null> {
     const index = propertiesState.findIndex((p) => p.id === id);
     if (index === -1) return null;
 
@@ -671,19 +669,17 @@ export const MockStore = {
     });
     notifyListeners();
 
-    // Async call to live backend
-    const payload = mapDashboardPropertyToBackend(propertiesState[index]);
-    apiClient
-      .put(`/properties/${id}`, payload)
-      .then((updated) => {
-        if (updated?.id) {
-          propertiesState[index] = mapBackendPropertyToDashboard(updated);
-          notifyListeners();
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to update property on backend:", err);
-      });
+    try {
+      const payload = mapDashboardPropertyToBackend(propertiesState[index]);
+      const updated = await apiClient.put(`/properties/${id}`, payload);
+      if (updated?.id) {
+        propertiesState[index] = mapBackendPropertyToDashboard(updated);
+        notifyListeners();
+        return propertiesState[index];
+      }
+    } catch (err) {
+      console.error("Failed to update property on backend:", err);
+    }
 
     return propertiesState[index];
   },
