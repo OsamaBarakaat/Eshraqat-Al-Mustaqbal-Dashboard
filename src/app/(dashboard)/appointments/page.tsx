@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -13,6 +13,7 @@ import {
   UserX,
   ChevronRight,
   ChevronLeft,
+  RefreshCw,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
 import { PageHeader } from "@/components/layout/page-header";
@@ -25,7 +26,7 @@ import { ActionTooltip } from "@/components/shared/action-tooltip";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { useToast } from "@/components/shared/toast-provider";
 import { APPOINTMENT_STATUS_CONFIG } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { Appointment } from "@/types/appointment";
 import { AdminUser } from "@/types/team";
 import { useDebounce } from "@/lib/hooks/use-debounce";
@@ -68,52 +69,54 @@ export default function AppointmentsPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [storeVersion, setStoreVersion] = useState(0);
 
   useEffect(() => {
     setIsLoading(MockStore.isLoading());
     const unsubscribe = subscribeToMockStore(() => {
       setEmployees(MockStore.getUsers());
       setIsLoading(MockStore.isLoading());
+      setStoreVersion((v) => v + 1);
     });
     return unsubscribe;
   }, []);
+
+  // Fetch Appointments Callback (Direct Backend + Store Sync)
+  const fetchAppointments = useCallback(async () => {
+    setIsTableLoading(true);
+    try {
+      const res = await MockStore.queryAppointments({
+        search: debouncedSearch,
+        status: statusFilter,
+        assignedEmployeeId: employeeFilter,
+        page: currentPage,
+        limit: PAGE_SIZE,
+      });
+      setAppointments(res.items);
+      setTotalAppointments(res.total);
+      setTotalPages(res.totalPages);
+    } catch {
+      // keep existing
+    } finally {
+      setIsTableLoading(false);
+    }
+  }, [debouncedSearch, statusFilter, employeeFilter, currentPage]);
 
   // Reset page when search or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, statusFilter, employeeFilter]);
 
-  // Execute Backend API Query on search / filter / page change
+  // Execute query on search / filter / page change
   useEffect(() => {
-    let cancelled = false;
-    setIsTableLoading(true);
+    fetchAppointments();
+  }, [fetchAppointments]);
 
-    MockStore.queryAppointments({
-      search: debouncedSearch,
-      status: statusFilter,
-      assignedEmployeeId: employeeFilter,
-      page: currentPage,
-      limit: PAGE_SIZE,
-    })
-      .then((res) => {
-        if (!cancelled) {
-          setAppointments(res.items);
-          setTotalAppointments(res.total);
-          setTotalPages(res.totalPages);
-          setIsTableLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setIsTableLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedSearch, statusFilter, employeeFilter, currentPage]);
-
-  // Global KPI Statistics
-  const allAppointments = MockStore.getAppointments();
+  // Global KPI Statistics (Reactive to store changes & local operations)
+  const allAppointments = useMemo(() => {
+    if (storeVersion < 0) return [];
+    return MockStore.getAppointments();
+  }, [storeVersion]);
   const pendingCount = allAppointments.filter((a) => a.status === "PENDING_CONFIRMATION").length;
   const confirmedCount = allAppointments.filter((a) => a.status === "CONFIRMED").length;
   const completedCount = allAppointments.filter((a) => a.status === "COMPLETED").length;
@@ -121,10 +124,22 @@ export default function AppointmentsPage() {
     (a) => a.status === "REJECTED" || a.status === "CANCELLED"
   ).length;
 
-  // Actions
-  const handleConfirm = (appt: Appointment) => {
-    MockStore.updateAppointmentStatus(appt.id, "CONFIRMED");
+  // Actions with Instant UI Update + Backend Refetch
+  const handleConfirm = async (appt: Appointment) => {
+    // 1. Instant optimistic state update
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === appt.id ? { ...a, status: "CONFIRMED", updatedAt: new Date().toISOString() } : a
+      )
+    );
     success("تم تأكيد موعد المعاينة", `تم تأكيد موعد المعاينة للعميل (${appt.customerName}) بنجاح.`);
+
+    // 2. Persist to Backend database
+    await MockStore.updateAppointmentStatus(appt.id, "CONFIRMED");
+
+    // 3. Refetch to guarantee 100% sync
+    await fetchAppointments();
+    setStoreVersion((v) => v + 1);
   };
 
   const handleOpenReject = (appt: Appointment) => {
@@ -132,11 +147,20 @@ export default function AppointmentsPage() {
     setRejectDialogOpen(true);
   };
 
-  const handleRejectConfirm = (reason?: string) => {
+  const handleRejectConfirm = async (reason?: string) => {
     if (!selectedAppointment) return;
-    MockStore.updateAppointmentStatus(selectedAppointment.id, "REJECTED", reason);
+    const targetId = selectedAppointment.id;
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === targetId ? { ...a, status: "REJECTED", rejectionReason: reason, updatedAt: new Date().toISOString() } : a
+      )
+    );
     setRejectDialogOpen(false);
     warning("تم رفض طلب المعاينة", `تم تسجيل سبب الرفض وإشعار مسؤولي المبيعات.`);
+
+    await MockStore.updateAppointmentStatus(targetId, "REJECTED", reason);
+    await fetchAppointments();
+    setStoreVersion((v) => v + 1);
   };
 
   const handleOpenCancel = (appt: Appointment) => {
@@ -144,21 +168,46 @@ export default function AppointmentsPage() {
     setCancelDialogOpen(true);
   };
 
-  const handleCancelConfirm = (reason?: string) => {
+  const handleCancelConfirm = async (reason?: string) => {
     if (!selectedAppointment) return;
-    MockStore.updateAppointmentStatus(selectedAppointment.id, "CANCELLED", reason);
+    const targetId = selectedAppointment.id;
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === targetId ? { ...a, status: "CANCELLED", cancellationReason: reason, updatedAt: new Date().toISOString() } : a
+      )
+    );
     setCancelDialogOpen(false);
     info("تم إلغاء الموعد", `تم إلغاء موعد المعاينة للعميل (${selectedAppointment.customerName}).`);
+
+    await MockStore.updateAppointmentStatus(targetId, "CANCELLED", reason);
+    await fetchAppointments();
+    setStoreVersion((v) => v + 1);
   };
 
-  const handleMarkCompleted = (appt: Appointment) => {
-    MockStore.updateAppointmentStatus(appt.id, "COMPLETED");
+  const handleMarkCompleted = async (appt: Appointment) => {
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === appt.id ? { ...a, status: "COMPLETED", updatedAt: new Date().toISOString() } : a
+      )
+    );
     success("اكتملت المعاينة", `تم وضع علامة "مكتمل" للمعاينة الميدانية.`);
+
+    await MockStore.updateAppointmentStatus(appt.id, "COMPLETED");
+    await fetchAppointments();
+    setStoreVersion((v) => v + 1);
   };
 
-  const handleMarkNoShow = (appt: Appointment) => {
-    MockStore.updateAppointmentStatus(appt.id, "NO_SHOW");
+  const handleMarkNoShow = async (appt: Appointment) => {
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === appt.id ? { ...a, status: "NO_SHOW", updatedAt: new Date().toISOString() } : a
+      )
+    );
     warning("لم يحضر العميل", `تم تسجيل تخلف العميل عن الحضور في الموعد المحدد.`);
+
+    await MockStore.updateAppointmentStatus(appt.id, "NO_SHOW");
+    await fetchAppointments();
+    setStoreVersion((v) => v + 1);
   };
 
   const handleOpenAssign = (appt: Appointment) => {
@@ -167,13 +216,30 @@ export default function AppointmentsPage() {
     setAssignModalOpen(true);
   };
 
-  const handleSaveAssign = () => {
+  const handleSaveAssign = async () => {
     if (!selectedAppointment || !selectedEmployeeId) return;
     const emp = employees.find((e) => e.id === selectedEmployeeId);
     if (!emp) return;
-    MockStore.assignAppointmentEmployee(selectedAppointment.id, emp.id, emp.name);
+    const targetId = selectedAppointment.id;
+
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === targetId
+          ? {
+              ...a,
+              assignedEmployeeId: emp.id,
+              assignedEmployeeName: emp.name,
+              updatedAt: new Date().toISOString(),
+            }
+          : a
+      )
+    );
     setAssignModalOpen(false);
     success("تم تعيين الموظف المسؤول", `تم إسناد المعاينة إلى (${emp.name}).`);
+
+    await MockStore.assignAppointmentEmployee(targetId, emp.id, emp.name);
+    await fetchAppointments();
+    setStoreVersion((v) => v + 1);
   };
 
   return (
@@ -183,6 +249,17 @@ export default function AppointmentsPage() {
         title="إدارة طلبات المعاينة والمواعيد"
         description="متابعة وتأكيد طلبات المعاينة الواردة من موقع إشراقة المستقبل، جدولة المواعيد الميدانية، وتعيين مسؤولي المبيعات."
         breadcrumbs={[{ label: "المعاينات" }]}
+        primaryAction={
+          <button
+            onClick={() => fetchAppointments()}
+            disabled={isTableLoading}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-neutral-surface border border-neutral-border text-foreground hover:bg-neutral-surface-hover hover:border-[#C5A059]/40 transition-colors cursor-pointer disabled:opacity-50"
+            title="تحديث قائمة المعاينات من الخادم"
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 text-[#C5A059]", isTableLoading && "animate-spin")} />
+            <span>تحديث المواعيد</span>
+          </button>
+        }
       />
 
       {/* KPI Cards */}

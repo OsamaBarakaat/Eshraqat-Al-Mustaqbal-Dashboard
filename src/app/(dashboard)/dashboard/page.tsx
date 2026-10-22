@@ -67,9 +67,12 @@ export default function DashboardPage() {
   const recentInquiries = inquiries.slice(0, 4);
   const recentProperties = properties.slice(0, 4);
 
-  const handleQuickConfirm = (appointmentId: string) => {
-    MockStore.updateAppointmentStatus(appointmentId, "CONFIRMED");
+  const handleQuickConfirm = async (appointmentId: string) => {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === appointmentId ? { ...a, status: "CONFIRMED" } : a))
+    );
     success("تم تأكيد موعد المعاينة بنجاح", "تم تحويل حالة الطلب إلى مؤكد وجدولته.");
+    await MockStore.updateAppointmentStatus(appointmentId, "CONFIRMED");
   };
 
   return (

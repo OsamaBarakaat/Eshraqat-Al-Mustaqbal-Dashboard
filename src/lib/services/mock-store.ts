@@ -747,7 +747,7 @@ export const MockStore = {
     return appointmentsState.find((a) => a.id === id);
   },
 
-  updateAppointmentStatus(id: string, status: AppointmentStatus, reason?: string): Appointment | null {
+  async updateAppointmentStatus(id: string, status: AppointmentStatus, reason?: string): Promise<Appointment | null> {
     const index = appointmentsState.findIndex((a) => a.id === id);
     if (index === -1) return null;
 
@@ -770,21 +770,21 @@ export const MockStore = {
     });
     notifyListeners();
 
-    // Async call to live backend
-    apiClient
-      .patch(`/appointments/${id}/status`, {
+    // Call live backend and sync
+    try {
+      await apiClient.patch(`/appointments/${id}/status`, {
         status,
         rejectionReason: updates.rejectionReason,
         cancellationReason: updates.cancellationReason,
-      })
-      .catch((err) => {
-        console.error("Failed to update appointment status on backend:", err);
       });
+    } catch (err) {
+      console.error("Failed to update appointment status on backend:", err);
+    }
 
     return appointmentsState[index];
   },
 
-  assignAppointmentEmployee(id: string, employeeId: string, employeeName: string): Appointment | null {
+  async assignAppointmentEmployee(id: string, employeeId: string, employeeName: string): Promise<Appointment | null> {
     const index = appointmentsState.findIndex((a) => a.id === id);
     if (index === -1) return null;
 
@@ -796,10 +796,12 @@ export const MockStore = {
     };
     notifyListeners();
 
-    // Async call to live backend
-    apiClient.patch(`/appointments/${id}/assign`, { assignedEmployeeId: employeeId }).catch((err) => {
+    // Call live backend and sync
+    try {
+      await apiClient.patch(`/appointments/${id}/assign`, { assignedEmployeeId: employeeId });
+    } catch (err) {
       console.error("Failed to assign appointment employee on backend:", err);
-    });
+    }
 
     return appointmentsState[index];
   },
