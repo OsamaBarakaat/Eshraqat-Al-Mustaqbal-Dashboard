@@ -97,12 +97,13 @@ export default function InquiriesPage() {
     };
   }, [debouncedSearch, statusFilter, typeFilter, currentPage]);
 
-  // Statistics from central store
+  // Statistics from central store or live query
   const allInquiries = MockStore.getInquiries();
-  const totalCount = allInquiries.length;
-  const newCount = allInquiries.filter((i) => i.status === "NEW").length;
-  const inProgressCount = allInquiries.filter((i) => i.status === "IN_PROGRESS").length;
-  const repliedCount = allInquiries.filter((i) => i.status === "REPLIED").length;
+  const effectiveInquiries = allInquiries.length > 0 ? allInquiries : inquiries;
+  const totalCount = Math.max(allInquiries.length, totalInquiries);
+  const newCount = effectiveInquiries.filter((i) => i.status === "NEW").length;
+  const inProgressCount = effectiveInquiries.filter((i) => i.status === "IN_PROGRESS").length;
+  const repliedCount = effectiveInquiries.filter((i) => i.status === "REPLIED").length;
 
   const handleUpdateStatus = (inq: Inquiry, newStatus: InquiryStatus, note?: string) => {
     MockStore.updateInquiryStatus(inq.id, newStatus, note);
@@ -111,9 +112,10 @@ export default function InquiriesPage() {
 
   const handleSaveReply = () => {
     if (!selectedInquiry || !replyNotes.trim()) return;
-    MockStore.updateInquiryStatus(selectedInquiry.id, "REPLIED", replyNotes.trim());
+    const updated = MockStore.updateInquiryStatus(selectedInquiry.id, "REPLIED", replyNotes.trim());
+    if (updated) setSelectedInquiry({ ...updated });
     setReplyNotes("");
-    success("تم تسجيل الرد", "تم حفظ الملاحظات وتحديث حالة الرسالة إلى 'تم الرد'.");
+    success("تم تسجيل الرد", "تم حفظ الرد وتحديث حالة الرسالة إلى 'تم الرد' وإشعار العميل على الموقع.");
   };
 
   return (

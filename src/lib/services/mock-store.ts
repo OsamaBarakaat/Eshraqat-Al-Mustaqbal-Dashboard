@@ -961,12 +961,12 @@ export const MockStore = {
       const totalPages = res?.meta?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 5)));
 
       if (rawItems.length > 0) {
-        rawItems.forEach((c: Client) => {
-          const idx = clientsState.findIndex((item) => item.id === c.id);
+        rawItems.forEach((inq: Inquiry) => {
+          const idx = inquiriesState.findIndex((item) => item.id === inq.id);
           if (idx > -1) {
-            clientsState[idx] = c;
+            inquiriesState[idx] = inq;
           } else {
-            clientsState.push(c);
+            inquiriesState.push(inq);
           }
         });
         saveCachedState();
