@@ -107,6 +107,12 @@ export default function InquiriesPage() {
 
   const handleUpdateStatus = (inq: Inquiry, newStatus: InquiryStatus, note?: string) => {
     MockStore.updateInquiryStatus(inq.id, newStatus, note);
+    if (selectedInquiry && selectedInquiry.id === inq.id) {
+      setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+    }
+    setInquiries((prev) =>
+      prev.map((item) => (item.id === inq.id ? { ...item, status: newStatus } : item))
+    );
     success("تم تحديث حالة الاستفسار", `تم تحويل الاستفسار إلى (${INQUIRY_STATUS_CONFIG[newStatus].label}).`);
   };
 
@@ -114,6 +120,13 @@ export default function InquiriesPage() {
     if (!selectedInquiry || !replyNotes.trim()) return;
     const updated = MockStore.updateInquiryStatus(selectedInquiry.id, "REPLIED", replyNotes.trim());
     if (updated) setSelectedInquiry({ ...updated });
+    setInquiries((prev) =>
+      prev.map((item) =>
+        item.id === selectedInquiry.id
+          ? { ...item, status: "REPLIED", replyNotes: replyNotes.trim(), repliedAt: new Date().toISOString() }
+          : item
+      )
+    );
     setReplyNotes("");
     success("تم تسجيل الرد", "تم حفظ الرد وتحديث حالة الرسالة إلى 'تم الرد' وإشعار العميل على الموقع.");
   };
@@ -218,7 +231,6 @@ export default function InquiriesPage() {
                     <th className="py-3.5 px-4">نوع الاستفسار</th>
                     <th className="py-3.5 px-4">موضوع الرسالة والعقار</th>
                     <th className="py-3.5 px-4">الحالة</th>
-                    <th className="py-3.5 px-4">الموظف المسند إليه</th>
                     <th className="py-3.5 px-4">تاريخ الإرسال</th>
                     <th className="py-3.5 px-4 text-center">إجراءات</th>
                   </tr>
@@ -265,11 +277,6 @@ export default function InquiriesPage() {
                         {/* Status */}
                         <td className="py-3 px-4 whitespace-nowrap">
                           <StatusBadge label={statusCfg.label} variant={statusCfg.color} />
-                        </td>
-
-                        {/* Assigned Employee */}
-                        <td className="py-3 px-4 whitespace-nowrap text-xs text-primary-text">
-                          {inq.assignedEmployeeName || "غير محدد"}
                         </td>
 
                         {/* Submission Date */}
