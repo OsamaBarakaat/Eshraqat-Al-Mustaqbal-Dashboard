@@ -1,10 +1,20 @@
 import { Resend } from "resend";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 const VERIFIED_RECEIVER = process.env.RESEND_VERIFIED_RECEIVER || "osaamabarakaat@gmail.com";
 
-export const resend = new Resend(RESEND_API_KEY);
+let resendInstance: Resend | null = null;
+
+export function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  if (!resendInstance) {
+    resendInstance = new Resend(apiKey);
+  }
+  return resendInstance;
+}
 
 interface SendOtpOptions {
   to: string;
@@ -22,6 +32,15 @@ export async function sendOtpEmail({
   userName = "مستخدم المنصة",
   expiryMinutes = 10,
 }: SendOtpOptions) {
+  const resend = getResendClient();
+  if (!resend) {
+    console.error("[Resend Error]: RESEND_API_KEY is missing in environment variables.");
+    return {
+      success: false,
+      error: "مفتاح RESEND_API_KEY غير موجود في إعدادات البيئة (Environment Variables).",
+    };
+  }
+
   // On Resend free tier (using onboarding@resend.dev), only the account owner's email can receive emails.
   // In development/testing, if the recipient is an internal or placeholder email, we ensure it goes to the verified email.
   const recipientEmail =

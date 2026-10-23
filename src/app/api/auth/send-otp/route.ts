@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { generateOtp, saveOtp } from "@/lib/services/otp-store";
 import { sendOtpEmail } from "@/lib/services/email";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
