@@ -203,7 +203,7 @@ export default function ClientsPage() {
 
       {/* Clients Table */}
       {isTableLoading || isLoading ? (
-        <TableSkeleton rows={PAGE_SIZE} columns={8} message="جاري جلب بيانات العملاء المحتملين..." />
+        <TableSkeleton rows={PAGE_SIZE} columns={7} message="جاري جلب بيانات العملاء المحتملين..." />
       ) : (
         <div className="rounded-2xl bg-surface border border-neutral-border shadow-xs overflow-hidden">
           {clients.length > 0 ? (
@@ -217,7 +217,6 @@ export default function ClientsPage() {
                     <th className="py-3.5 px-4">العقار المهتم به</th>
                     <th className="py-3.5 px-4">المصدر</th>
                     <th className="py-3.5 px-4">حالة العميل</th>
-                    <th className="py-3.5 px-4">المسؤول</th>
                     <th className="py-3.5 px-4">آخر نشاط</th>
                     <th className="py-3.5 px-4 text-center">إجراءات سريعة</th>
                   </tr>
@@ -277,11 +276,6 @@ export default function ClientsPage() {
                             <option value="CONVERTED">تم التعاقد</option>
                             <option value="LOST">فرصة ضائعة</option>
                           </select>
-                        </td>
-
-                        {/* Assigned Employee */}
-                        <td className="py-3 px-4 whitespace-nowrap text-xs text-primary-text font-medium">
-                          {client.assignedEmployeeName || "غير محدد"}
                         </td>
 
                         {/* Last Activity */}
