@@ -16,6 +16,9 @@ import {
   X,
   FileText,
   Loader2,
+  MessageSquare,
+  RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { MockStore } from "@/lib/services/mock-store";
 import { PageHeader } from "@/components/layout/page-header";
@@ -53,6 +56,7 @@ export default function PasswordRecoveryPage() {
   const [activeRequest, setActiveRequest] = useState<PasswordRecoveryRequest | null>(null);
   const [actionType, setActionType] = useState<"APPROVE" | "REJECT" | "VIEW" | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [approvedResult, setApprovedResult] = useState<PasswordRecoveryRequest | null>(null);
 
@@ -97,12 +101,16 @@ export default function PasswordRecoveryPage() {
     setActionType(type);
     setAdminNotes(request.adminNotes || "");
     setApprovedResult(null);
+    if (type === "APPROVE") {
+      setTempPassword("Esh@" + Math.floor(100000 + Math.random() * 900000));
+    }
   };
 
   const handleCloseModal = () => {
     setActiveRequest(null);
     setActionType(null);
     setAdminNotes("");
+    setTempPassword("");
     setApprovedResult(null);
   };
 
@@ -114,17 +122,23 @@ export default function PasswordRecoveryPage() {
       return;
     }
 
+    if (actionType === "APPROVE" && (!tempPassword.trim() || tempPassword.trim().length < 6)) {
+      error("تنبيه", "كلمة المرور يجب أن لا تقل عن 6 خانات.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const updated = await MockStore.reviewPasswordRecoveryRequest(
         activeRequest.id,
         actionType === "APPROVE" ? "APPROVED" : "REJECTED",
-        adminNotes.trim() || undefined
+        adminNotes.trim() || undefined,
+        actionType === "APPROVE" ? tempPassword.trim() : undefined
       );
 
       if (actionType === "APPROVE") {
         setApprovedResult(updated);
-        success("تمت الموافقة بنجاح", `تم إنشاء رابط الاستعادة الآمن للعميل (${activeRequest.client?.name || activeRequest.requestedEmail}).`);
+        success("تم تعيين كلمة المرور بنجاح", `تم تحديث كلمة المرور للعميل (${activeRequest.client?.name || activeRequest.requestedEmail}) وأصبحت جاهزة للإرسال عبر واتساب.`);
       } else {
         success("تم الرفض", `تم رفض طلب استعادة كلمة المرور.`);
         handleCloseModal();
@@ -341,8 +355,8 @@ export default function PasswordRecoveryPage() {
                                     onClick={() => handleOpenAction(req, "APPROVE")}
                                     className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold flex items-center gap-1 transition-colors"
                                   >
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    موافقة
+                                    <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
+                                    تعيين كلمة المرور
                                   </button>
                                   <button
                                     onClick={() => handleOpenAction(req, "REJECT")}
@@ -362,15 +376,17 @@ export default function PasswordRecoveryPage() {
                                 </button>
                               )}
 
-                              {/* Direct Copy Button for Approved Requests */}
-                              {(req.status === "APPROVED" || req.status === "COMPLETED") && req.resetUrl && (
-                                <button
-                                  onClick={() => copyToClipboard(req.resetUrl!)}
-                                  title="نسخ رابط الاستعادة"
-                                  className="p-1.5 rounded-lg text-secondary-text hover:text-[#C5A059] hover:bg-zinc-100 transition-colors"
+                              {/* WhatsApp Direct Chat Button */}
+                              {req.client?.phone && (
+                                <a
+                                  href={`https://wa.me/${req.client.phone.replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="محادثة العميل عبر واتساب"
+                                  className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                                 >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </a>
                               )}
                             </div>
                           </td>
@@ -493,40 +509,100 @@ export default function PasswordRecoveryPage() {
                 </div>
               </div>
 
-              {/* Approval Success State (Displays Reset URL) */}
-              {approvedResult?.resetUrl ? (
+              {/* Approval Success State (Displays Reset Password & WhatsApp Link) */}
+              {approvedResult ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
                     <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                      <span>تم توليد رابط إعادة التعيين بنجاح!</span>
+                      <span>تم تعيين كلمة المرور الجديدة وتحديث الحساب بنجاح!</span>
                     </div>
-                    <p className="text-xs text-emerald-700 leading-relaxed">
-                      تم إرسال بريد إلكتروني للعميل عبر Resend (في حال تفعيل الخدمة)، كما يمكنك نسخ الرابط المباشر وإرساله للعميل يدوياً:
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={approvedResult.resetUrl}
-                        className="w-full text-xs font-mono bg-white border border-emerald-300 rounded-lg px-3 py-2 text-emerald-900 select-all"
-                      />
+
+                    <div className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-emerald-300 shadow-xs">
+                      <div>
+                        <span className="text-[11px] text-zinc-500 block mb-0.5 font-medium">كلمة المرور الجديدة المعتمدة:</span>
+                        <span className="font-mono font-bold text-lg text-emerald-950 tracking-wider select-all">
+                          {approvedResult.newPassword || tempPassword}
+                        </span>
+                      </div>
                       <button
-                        onClick={() => copyToClipboard(approvedResult.resetUrl!)}
-                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-xs"
+                        type="button"
+                        onClick={() => copyToClipboard(approvedResult.newPassword || tempPassword)}
+                        className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Copy className="w-3.5 h-3.5" />
-                        نسخ
+                        نسخ الرمز
                       </button>
                     </div>
                   </div>
-                  <div className="text-xs text-secondary-text flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#C5A059]" />
-                    <span>صلاحية الرابط: 24 ساعة من وقت الاعتماد، ويُستخدم لمرة واحدة فقط.</span>
+
+                  {/* WhatsApp Direct Action Card */}
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 text-zinc-900 font-bold text-sm">
+                      <MessageSquare className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span>إرسال الرمز للعميل عبر واتساب مباشرة</span>
+                    </div>
+                    <p className="text-xs text-zinc-600 leading-relaxed">
+                      تم تجهيز رسالة الترحيب متضمنة كلمة المرور الجديدة ورابط الموقع للعميل ({activeRequest.client?.name || activeRequest.client?.phone || activeRequest.requestedEmail}).
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      {approvedResult.whatsappUrl ? (
+                        <a
+                          href={approvedResult.whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>إرسال عبر واتساب الآن</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      ) : null}
+                      {approvedResult.whatsappText ? (
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(approvedResult.whatsappText!)}
+                          className="py-2.5 px-3 bg-white border border-neutral-border hover:bg-zinc-50 text-zinc-700 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          نسخ نص الرسالة
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : (
                 <>
+                  {/* Approve Password Input */}
+                  {actionType === "APPROVE" && (
+                    <div className="space-y-2 p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-amber-950">
+                          كلمة المرور الجديدة المخصصة للعميل:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setTempPassword("Esh@" + Math.floor(100000 + Math.random() * 900000))}
+                          className="text-[11px] text-amber-800 hover:text-amber-950 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          توليد رمز آخر
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={tempPassword}
+                        onChange={(e) => setTempPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-mono font-bold text-zinc-900 focus:outline-none focus:border-[#C5A059]"
+                      />
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        💡 سيتم تغيير وتعيين كلمة المرور هذه لحساب العميل فوراً في النظام وتحديث قاعدة البيانات، وتجهيز رسالة واتساب جاهزة للإرسال.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Notes / Reason input for Approve / Reject */}
                   {actionType !== "VIEW" && (
                     <div className="space-y-2">
@@ -534,7 +610,7 @@ export default function PasswordRecoveryPage() {
                         {actionType === "APPROVE" ? "ملاحظات إدارية (اختياري):" : "سبب الرفض (إلزامي):"}
                       </label>
                       <textarea
-                        rows={3}
+                        rows={2}
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
                         placeholder={
@@ -557,24 +633,19 @@ export default function PasswordRecoveryPage() {
                         </div>
                       )}
 
-                      {activeRequest.resetUrl && (
-                        <div className="p-3 bg-zinc-50 rounded-xl border border-neutral-border-subtle space-y-1.5">
-                          <span className="block text-xs font-semibold text-secondary-text">رابط الاستعادة الأمني:</span>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              readOnly
-                              value={activeRequest.resetUrl}
-                              className="w-full text-xs font-mono bg-white border border-neutral-border rounded-lg px-2.5 py-1.5 text-primary-text select-all"
-                            />
-                            <button
-                              onClick={() => copyToClipboard(activeRequest.resetUrl!)}
-                              className="px-2.5 py-1.5 bg-[#C5A059] hover:bg-[#B38E46] text-black rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 transition-colors"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                              نسخ
-                            </button>
-                          </div>
+                      {/* WhatsApp Direct Chat Button in View */}
+                      {activeRequest.client?.phone && (
+                        <div className="pt-1">
+                          <a
+                            href={`https://wa.me/${activeRequest.client.phone.replace(/[^0-9]/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            <span>فتح محادثة واتساب مع العميل</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
                         </div>
                       )}
 

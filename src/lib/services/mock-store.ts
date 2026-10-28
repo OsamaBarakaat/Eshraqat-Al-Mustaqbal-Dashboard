@@ -994,12 +994,13 @@ export const MockStore = {
   async reviewPasswordRecoveryRequest(
     id: string,
     status: "APPROVED" | "REJECTED",
-    adminNotes?: string
+    adminNotes?: string,
+    newPassword?: string
   ): Promise<PasswordRecoveryRequest> {
     try {
       const updated = await apiClient.patch<PasswordRecoveryRequest>(
         `/password-recovery/${id}/review`,
-        { status, adminNotes }
+        { status, adminNotes, newPassword }
       );
       const idx = recoveryRequestsState.findIndex((r) => r.id === id);
       if (idx > -1) {

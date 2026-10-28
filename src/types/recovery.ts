@@ -38,6 +38,9 @@ export interface PasswordRecoveryRequest {
   client?: PasswordRecoveryClient;
   reviewedBy?: PasswordRecoveryReviewer;
   resetUrl?: string;
+  newPassword?: string;
+  whatsappUrl?: string;
+  whatsappText?: string;
 }
 
 export interface QueryRecoveryRequestsParams {
