@@ -9,6 +9,7 @@ import {
   Globe2,
   BarChart3,
   Settings,
+  KeyRound,
   LucideIcon,
 } from "lucide-react";
 import { ModuleType } from "@/types/team";
@@ -61,6 +62,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         title: "العملاء",
         href: "/clients",
         icon: Users2,
+        module: "clients",
+      },
+      {
+        title: "طلبات استعادة كلمة المرور",
+        href: "/password-recovery",
+        icon: KeyRound,
         module: "clients",
       },
       {

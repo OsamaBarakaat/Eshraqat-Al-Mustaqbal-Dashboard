@@ -4,6 +4,7 @@ import { LeadStatus, LeadSource } from "@/types/client";
 import { InquiryStatus, InquiryType } from "@/types/inquiry";
 import { RoleType } from "@/types/team";
 import { StatusColor } from "@/types/common";
+import { PasswordRecoveryStatus } from "@/types/recovery";
 
 export const APP_NAME = "إشراقة المستقبل للعقارات";
 export const APP_TAGLINE = "نحو غدٍ مشرق";
@@ -57,6 +58,17 @@ export const LEAD_STATUS_CONFIG: Record<
   QUALIFIED: { label: "عميل مؤهل", color: "gold" },
   CONVERTED: { label: "تم التعاقد / حجز", color: "success" },
   LOST: { label: "فرصة ضائعة", color: "neutral" },
+};
+
+export const PASSWORD_RECOVERY_STATUS_CONFIG: Record<
+  PasswordRecoveryStatus,
+  { label: string; color: StatusColor }
+> = {
+  PENDING: { label: "قيد المراجعة", color: "warning" },
+  APPROVED: { label: "تمت الموافقة", color: "success" },
+  REJECTED: { label: "مرفوض", color: "destructive" },
+  COMPLETED: { label: "مكتمل (تم التعيين)", color: "info" },
+  EXPIRED: { label: "منتهي الصلاحية", color: "neutral" },
 };
 
 export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {

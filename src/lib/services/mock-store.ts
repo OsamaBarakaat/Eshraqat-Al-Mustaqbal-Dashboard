@@ -10,6 +10,10 @@ import { FAQ, ContactSettings, SocialLink, HomepageContent, SeoDefaults, Website
 import { Province, City, District } from "@/types/location";
 import { DashboardStats } from "@/types/stats";
 import { AuditActivity } from "@/types/common";
+import {
+  PasswordRecoveryRequest,
+  QueryRecoveryRequestsParams,
+} from "@/types/recovery";
 import { apiClient } from "./api-client";
 
 import {
@@ -24,6 +28,7 @@ import {
 let propertiesState: Property[] = [];
 let appointmentsState: Appointment[] = [];
 let clientsState: Client[] = [];
+let recoveryRequestsState: PasswordRecoveryRequest[] = [];
 let inquiriesState: Inquiry[] = [];
 let usersState: AdminUser[] = [];
 let rolesState: Role[] = [];
@@ -930,6 +935,82 @@ export const MockStore = {
       });
 
     return client;
+  },
+
+  // ------------------------------------------
+  // PASSWORD RECOVERY REQUESTS
+  // ------------------------------------------
+  async queryPasswordRecoveryRequests(query: QueryRecoveryRequestsParams = {}): Promise<{
+    items: PasswordRecoveryRequest[];
+    total: number;
+    totalPages: number;
+  }> {
+    const params: Record<string, any> = {
+      page: query.page || 1,
+      limit: query.limit || 10,
+    };
+    if (query.search?.trim()) params.search = query.search.trim();
+    if (query.status && (query.status as any) !== "ALL") params.status = query.status;
+
+    try {
+      const res = await apiClient.get<any>("/password-recovery", params);
+      const rawItems = res?.items || [];
+      const total = res?.total ?? rawItems.length;
+      const totalPages = res?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 10)));
+
+      recoveryRequestsState = rawItems;
+      return {
+        items: rawItems,
+        total,
+        totalPages,
+      };
+    } catch (err) {
+      console.error("Failed to query password recovery requests:", err);
+      let filtered = [...recoveryRequestsState];
+      if (query.status && (query.status as any) !== "ALL") {
+        filtered = filtered.filter((r) => r.status === query.status);
+      }
+      if (query.search?.trim()) {
+        const s = query.search.trim().toLowerCase();
+        filtered = filtered.filter(
+          (r) =>
+            r.requestedEmail?.toLowerCase().includes(s) ||
+            r.requestedPhone?.includes(s) ||
+            r.client?.name?.toLowerCase().includes(s)
+        );
+      }
+      const page = query.page || 1;
+      const limit = query.limit || 10;
+      const total = filtered.length;
+      const paginated = filtered.slice((page - 1) * limit, page * limit);
+      return {
+        items: paginated,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      };
+    }
+  },
+
+  async reviewPasswordRecoveryRequest(
+    id: string,
+    status: "APPROVED" | "REJECTED",
+    adminNotes?: string
+  ): Promise<PasswordRecoveryRequest> {
+    try {
+      const updated = await apiClient.patch<PasswordRecoveryRequest>(
+        `/password-recovery/${id}/review`,
+        { status, adminNotes }
+      );
+      const idx = recoveryRequestsState.findIndex((r) => r.id === id);
+      if (idx > -1) {
+        recoveryRequestsState[idx] = updated;
+      }
+      notifyListeners();
+      return updated;
+    } catch (err: any) {
+      console.error("Failed to review password recovery request on backend:", err);
+      throw err;
+    }
   },
 
   // ------------------------------------------
