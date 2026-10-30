@@ -22,10 +22,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ActionTooltip } from "@/components/shared/action-tooltip";
 import { DashboardCharts } from "@/features/dashboard/components/dashboard-charts";
-import {
-  PROPERTY_STATUS_CONFIG,
-  INQUIRY_STATUS_CONFIG,
-} from "@/lib/constants";
+import { PROPERTY_STATUS_CONFIG, INQUIRY_STATUS_CONFIG } from "@/lib/constants";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { useToast } from "@/components/shared/toast-provider";
 
@@ -62,16 +59,25 @@ export default function DashboardPage() {
     return unsubscribe;
   }, []);
 
-  const pendingAppointments = appointments.filter((a) => a.status === "PENDING_CONFIRMATION");
-  const upcomingAppointments = appointments.filter((a) => a.status === "CONFIRMED").slice(0, 4);
+  const pendingAppointments = appointments.filter(
+    (a) => a.status === "PENDING_CONFIRMATION"
+  );
+  const upcomingAppointments = appointments
+    .filter((a) => a.status === "CONFIRMED")
+    .slice(0, 4);
   const recentInquiries = inquiries.slice(0, 4);
   const recentProperties = properties.slice(0, 4);
 
   const handleQuickConfirm = async (appointmentId: string) => {
     setAppointments((prev) =>
-      prev.map((a) => (a.id === appointmentId ? { ...a, status: "CONFIRMED" } : a))
+      prev.map((a) =>
+        a.id === appointmentId ? { ...a, status: "CONFIRMED" } : a
+      )
     );
-    success("تم تأكيد موعد المعاينة بنجاح", "تم تحويل حالة الطلب إلى مؤكد وجدولته.");
+    success(
+      "تم تأكيد موعد المعاينة بنجاح",
+      "تم تحويل حالة الطلب إلى مؤكد وجدولته."
+    );
     await MockStore.updateAppointmentStatus(appointmentId, "CONFIRMED");
   };
 
@@ -163,11 +169,17 @@ export default function DashboardPage() {
 
         <StatCard
           title="المواقع والمناطق الجغرافية"
-          value={stats.totalDistricts !== undefined ? `${stats.totalDistricts} حي` : "0 حي"}
+          value={
+            stats.totalDistricts !== undefined
+              ? `${stats.totalDistricts} حي`
+              : "0 حي"
+          }
           icon={MapPin}
           subtitle={
             (stats.totalCities ?? 0) > 0 || (stats.totalProvinces ?? 0) > 0
-              ? `${stats.totalCities ?? 0} مدينة • ${stats.totalProvinces ?? 0} مناطق`
+              ? `${stats.totalCities ?? 0} مدينة • ${
+                  stats.totalProvinces ?? 0
+                } مناطق`
               : "شجرة التوزيع الجغرافي بالسعودية"
           }
           href="/locations"
@@ -206,10 +218,12 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h3 className="font-bold text-sm sm:text-base text-amber-950">
-                  طلبات معاينة عاجلة بانتظار التأكيد ({pendingAppointments.length})
+                  طلبات معاينة عاجلة بانتظار التأكيد (
+                  {pendingAppointments.length})
                 </h3>
                 <p className="text-xs text-amber-800/90 mt-0.5">
-                  يرجى مراجعة وتأكيد مواعيد المعاينات قبل تواصل العميل أو انتهاء الفترة الزمنية.
+                  يرجى مراجعة وتأكيد مواعيد المعاينات قبل تواصل العميل أو انتهاء
+                  الفترة الزمنية.
                 </p>
               </div>
             </div>
@@ -231,15 +245,23 @@ export default function DashboardPage() {
               >
                 <div className="text-right overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs sm:text-sm text-primary-text">{appt.customerName}</span>
-                    <span className="text-[11px] text-secondary-text font-tabular dir-ltr">{appt.customerPhone}</span>
+                    <span className="font-bold text-xs sm:text-sm text-primary-text">
+                      {appt.customerName}
+                    </span>
+                    <span className="text-[11px] text-secondary-text font-tabular dir-ltr">
+                      {appt.customerPhone}
+                    </span>
                   </div>
-                  <p className="text-xs text-secondary-text mt-1 truncate" title={appt.propertyTitle}>
+                  <p
+                    className="text-xs text-secondary-text mt-1 truncate"
+                    title={appt.propertyTitle}
+                  >
                     {appt.propertyTitle}
                   </p>
                   <p className="text-[11px] font-medium text-amber-800 mt-1 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    الموعد المقترح: {appt.requestedDate} الساعة {formatTo12Hour(appt.requestedTime)}
+                    الموعد المقترح: {appt.requestedDate} الساعة{" "}
+                    {formatTo12Hour(appt.requestedTime)}
                   </p>
                 </div>
 
@@ -275,7 +297,9 @@ export default function DashboardPage() {
                 <h3 className="font-bold text-sm sm:text-base text-primary-text">
                   أحدث استفسارات ورسائل الموقع
                 </h3>
-                <p className="text-xs text-secondary-text mt-0.5">رسائل الزوار ونماذج الاتصال الواردة</p>
+                <p className="text-xs text-secondary-text mt-0.5">
+                  رسائل الزوار ونماذج الاتصال الواردة
+                </p>
               </div>
               <Link
                 href="/inquiries"
@@ -304,14 +328,27 @@ export default function DashboardPage() {
                 recentInquiries.map((inq) => {
                   const statusCfg = INQUIRY_STATUS_CONFIG[inq.status];
                   return (
-                    <div key={inq.id} className="py-3 flex items-start justify-between gap-3">
+                    <div
+                      key={inq.id}
+                      className="py-3 flex items-start justify-between gap-3"
+                    >
                       <div className="overflow-hidden flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-xs sm:text-sm text-primary-text">{inq.senderName}</span>
-                          <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
+                          <span className="font-semibold text-xs sm:text-sm text-primary-text">
+                            {inq.senderName}
+                          </span>
+                          <StatusBadge
+                            label={statusCfg.label}
+                            variant={statusCfg.color}
+                            size="sm"
+                          />
                         </div>
-                        <p className="text-xs text-primary-text font-medium mt-1 truncate">{inq.subject}</p>
-                        <p className="text-xs text-secondary-text mt-0.5 line-clamp-1">{inq.message}</p>
+                        <p className="text-xs text-primary-text font-medium mt-1 truncate">
+                          {inq.subject}
+                        </p>
+                        <p className="text-xs text-secondary-text mt-0.5 line-clamp-1">
+                          {inq.message}
+                        </p>
                       </div>
                       <span className="text-[10px] text-muted-text whitespace-nowrap shrink-0 mt-1">
                         {formatDateTime(inq.submittedAt)}
@@ -320,7 +357,9 @@ export default function DashboardPage() {
                   );
                 })
               ) : (
-                <p className="text-xs text-secondary-text py-6 text-center">لا توجد رسائل أو استفسارات حالياً.</p>
+                <p className="text-xs text-secondary-text py-6 text-center">
+                  لا توجد رسائل أو استفسارات حالياً.
+                </p>
               )}
             </div>
           </div>
@@ -344,7 +383,9 @@ export default function DashboardPage() {
                 <h3 className="font-bold text-sm sm:text-base text-primary-text">
                   المعاينات القادمة المؤكدة
                 </h3>
-                <p className="text-xs text-secondary-text mt-0.5">زيارات مجدولة مع مستشاري المبيعات</p>
+                <p className="text-xs text-secondary-text mt-0.5">
+                  زيارات مجدولة مع مستشاري المبيعات
+                </p>
               </div>
               <Link
                 href="/appointments"
@@ -371,26 +412,39 @@ export default function DashboardPage() {
                 </div>
               ) : upcomingAppointments.length > 0 ? (
                 upcomingAppointments.map((appt) => (
-                  <div key={appt.id} className="py-3 flex items-start justify-between gap-3">
+                  <div
+                    key={appt.id}
+                    className="py-3 flex items-start justify-between gap-3"
+                  >
                     <div className="overflow-hidden flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-xs sm:text-sm text-primary-text">{appt.customerName}</span>
+                        <span className="font-semibold text-xs sm:text-sm text-primary-text">
+                          {appt.customerName}
+                        </span>
                         <StatusBadge label="مؤكد" variant="success" size="sm" />
                       </div>
-                      <p className="text-xs text-secondary-text mt-1 truncate">{appt.propertyTitle}</p>
+                      <p className="text-xs text-secondary-text mt-1 truncate">
+                        {appt.propertyTitle}
+                      </p>
                       <p className="text-[11px] text-brand-gold-deep mt-0.5 font-medium">
                         المسؤول: {appt.assignedEmployeeName || "غير محدد"}
                       </p>
                     </div>
 
                     <div className="text-left shrink-0">
-                      <span className="text-xs font-bold text-primary-text font-tabular block">{appt.requestedDate}</span>
-                      <span className="text-[11px] text-secondary-text font-tabular">{formatTo12Hour(appt.requestedTime)}</span>
+                      <span className="text-xs font-bold text-primary-text font-tabular block">
+                        {appt.requestedDate}
+                      </span>
+                      <span className="text-[11px] text-secondary-text font-tabular">
+                        {formatTo12Hour(appt.requestedTime)}
+                      </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-secondary-text py-6 text-center">لا توجد مواعيد مؤكدة مجدولة حالياً.</p>
+                <p className="text-xs text-secondary-text py-6 text-center">
+                  لا توجد مواعيد مؤكدة مجدولة حالياً.
+                </p>
               )}
             </div>
           </div>
@@ -416,7 +470,9 @@ export default function DashboardPage() {
               <h3 className="font-bold text-sm sm:text-base text-primary-text">
                 أحدث العقارات المسجلة
               </h3>
-              <p className="text-xs text-secondary-text mt-0.5">آخر الوحدات المعروضة على المنصة</p>
+              <p className="text-xs text-secondary-text mt-0.5">
+                آخر الوحدات المعروضة على المنصة
+              </p>
             </div>
             <Link
               href="/properties"
@@ -430,7 +486,10 @@ export default function DashboardPage() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[1, 2].map((i) => (
-                <div key={i} className="rounded-xl border border-neutral-border-subtle p-3 animate-pulse space-y-3 bg-warm-white/50">
+                <div
+                  key={i}
+                  className="rounded-xl border border-neutral-border-subtle p-3 animate-pulse space-y-3 bg-warm-white/50"
+                >
                   <div className="aspect-video rounded-lg bg-zinc-200" />
                   <div className="h-3 w-16 bg-zinc-200 rounded-md" />
                   <div className="h-4 w-3/4 bg-zinc-200 rounded-md" />
@@ -440,7 +499,8 @@ export default function DashboardPage() {
             </div>
           ) : recentProperties.length === 0 ? (
             <div className="p-8 text-center bg-warm-white/40 rounded-xl border border-dashed border-neutral-border text-xs text-secondary-text">
-              لا توجد عقارات مضافة بعد. يمكنك النقر على &quot;إضافة عقار جديد&quot; لبدء إضافة عقاراتك.
+              لا توجد عقارات مضافة بعد. يمكنك النقر على &quot;إضافة عقار
+              جديد&quot; لبدء إضافة عقاراتك.
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -460,18 +520,26 @@ export default function DashboardPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-2 right-2">
-                        <StatusBadge label={statusCfg.label} variant={statusCfg.color} size="sm" />
+                        <StatusBadge
+                          label={statusCfg.label}
+                          variant={statusCfg.color}
+                          size="sm"
+                        />
                       </div>
-                      {prop.originalPrice && prop.originalPrice > prop.price && prop.discountPercentage && (
-                        <div className="absolute top-2 left-2">
-                          <span className="px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold shadow-xs">
-                            خصم {prop.discountPercentage}%
-                          </span>
-                        </div>
-                      )}
+                      {prop.originalPrice &&
+                        prop.originalPrice > prop.price &&
+                        prop.discountPercentage && (
+                          <div className="absolute top-2 left-2">
+                            <span className="px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold shadow-xs">
+                              خصم {prop.discountPercentage}%
+                            </span>
+                          </div>
+                        )}
                     </div>
 
-                    <span className="text-[11px] font-mono font-semibold text-brand-gold-deep">{prop.code}</span>
+                    <span className="text-[11px] font-mono font-semibold text-brand-gold-deep">
+                      {prop.code}
+                    </span>
                     <h4 className="font-bold text-xs sm:text-sm text-primary-text truncate mt-0.5 group-hover:text-brand-gold-deep transition-colors">
                       {prop.title}
                     </h4>
@@ -489,7 +557,9 @@ export default function DashboardPage() {
                         {formatCurrency(prop.price)}
                       </p>
                     )}
-                    <p className="text-[11px] text-secondary-text mt-0.5 truncate">{prop.location.area}</p>
+                    <p className="text-[11px] text-secondary-text mt-0.5 truncate">
+                      {prop.location.area}
+                    </p>
                   </Link>
                 );
               })}
@@ -498,7 +568,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Audit Activity Log (1 Col) */}
-        <div className="p-5 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right">
+        {/*<div className="p-5 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right">
           <div className="mb-4">
             <h3 className="font-bold text-sm sm:text-base text-primary-text">
               سجل النشاط الإداري الأخير
@@ -541,7 +611,7 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </div>*/}
       </div>
     </div>
   );
