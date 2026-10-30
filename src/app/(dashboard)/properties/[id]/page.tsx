@@ -12,6 +12,7 @@ import {
   CheckCircle,
   XCircle,
   Check,
+  ExternalLink,
 } from "lucide-react";
 import { MockStore, subscribeToMockStore } from "@/lib/services/mock-store";
 import { PageHeader } from "@/components/layout/page-header";
@@ -286,6 +287,19 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                 <p className="text-secondary-text leading-relaxed">
                   <strong>الوصف التفصيلي للموقع:</strong> {property.location.streetAddress}
                 </p>
+              )}
+              {property.location.googleMapsUrl && (
+                <div className="pt-2">
+                  <a
+                    href={property.location.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-brand-charcoal bg-brand-gold/15 hover:bg-brand-gold/25 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-brand-gold-deep" />
+                    <span>رابط الموقع على خرائط جوجل</span>
+                  </a>
+                </div>
               )}
             </div>
           </div>

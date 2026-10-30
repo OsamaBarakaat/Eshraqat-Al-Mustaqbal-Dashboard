@@ -24,6 +24,7 @@ export const propertyFormSchema = z.object({
   city: z.string().min(2, "اسم المدينة مطلوب"),
   areaName: z.string().min(2, "اسم المنطقة أو الحي مطلوب"),
   streetAddress: z.string().optional(),
+  googleMapsUrl: z.string().optional(),
 
   // Specs
   bedrooms: z.coerce.number().optional(),

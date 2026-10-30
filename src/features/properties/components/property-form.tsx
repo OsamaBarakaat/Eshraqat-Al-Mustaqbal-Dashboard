@@ -111,6 +111,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
     city: initialData?.location.city || "مدينة الرياض",
     areaName: initialData?.location.area || "حي النرجس",
     streetAddress: initialData?.location.streetAddress || "",
+    googleMapsUrl: initialData?.location?.googleMapsUrl || (initialData as any)?.googleMapsUrl || "",
     bedrooms: initialData?.specs.residential?.bedrooms || 3,
     bathrooms: initialData?.specs.residential?.bathrooms || 2,
     livingRooms: initialData?.specs.residential?.livingRooms || 1,
@@ -468,6 +469,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
           city: data.city,
           area: data.areaName,
           streetAddress: data.streetAddress,
+          googleMapsUrl: data.googleMapsUrl?.trim() || undefined,
         },
         specs: {
           residential:
@@ -738,6 +740,24 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
               placeholder="مثال: شمال طريق الملك سلمان، حي النرجس، الكيلو الثاني، بالقرب من..."
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
+          </div>
+
+          <div className="sm:col-span-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-primary-text">
+                رابط الموقع على خرائط جوجل (Google Maps Location Link)
+              </label>
+              <span className="text-[11px] text-secondary-text font-normal">اختياري - إذا تُرك فارغاً لن يظهر زر الاتجاهات في صفحة العقار</span>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                {...register("googleMapsUrl")}
+                placeholder="https://maps.app.goo.gl/... أو https://www.google.com/maps?q=..."
+                className="w-full pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold dir-ltr text-left"
+              />
+              <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-text pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>

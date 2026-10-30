@@ -39,19 +39,28 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div
+      className={cn(
+        "fixed inset-0 z-50 lg:hidden transition-opacity duration-300",
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      )}
+      aria-hidden={!isOpen}
+    >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in cursor-pointer"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 cursor-pointer"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer coming from the right for Arabic RTL */}
-      <div className="fixed inset-y-0 right-0 w-[280px] sm:w-[320px] bg-brand-charcoal text-zinc-300 shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-300">
+      <div
+        className={cn(
+          "fixed inset-y-0 right-0 w-[280px] sm:w-[320px] bg-brand-charcoal text-zinc-300 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out",
+          isOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
         {/* Header */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-zinc-800 shrink-0">
           <BrandLogo variant="dark" href="/dashboard" />

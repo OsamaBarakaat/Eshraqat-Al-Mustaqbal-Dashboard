@@ -20,6 +20,7 @@ export interface PropertyLocation {
   city: string;
   area: string;
   streetAddress?: string;
+  googleMapsUrl?: string;
   latitude?: number;
   longitude?: number;
 }
