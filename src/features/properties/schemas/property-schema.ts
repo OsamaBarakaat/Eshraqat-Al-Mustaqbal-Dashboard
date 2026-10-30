@@ -38,7 +38,13 @@ export const propertyFormSchema = z.object({
   roomsCount: z.coerce.number().optional(),
 
   landClassification: z.string().optional(),
-  waterAvailability: z.boolean().optional(),
+  waterAvailability: z.preprocess((val) => {
+    if (typeof val === "boolean") return val;
+    if (val === "true") return true;
+    if (val === "false") return false;
+    if (val === undefined || val === null || val === "") return undefined;
+    return Boolean(val);
+  }, z.boolean().optional()).optional(),
   waterSource: z.string().optional(),
 
   // Amenities

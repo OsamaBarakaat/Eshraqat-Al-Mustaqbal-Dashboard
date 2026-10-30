@@ -494,7 +494,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
             data.category === "AGRICULTURAL"
               ? {
                   landClassification: data.landClassification || "",
-                  waterAvailability: Boolean(data.waterAvailability),
+                  waterAvailability: data.waterAvailability === true || String(data.waterAvailability) === "true",
                   waterSource: data.waterSource,
                 }
               : undefined,
@@ -730,12 +730,12 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
           <div className="sm:col-span-3">
             <label className="block text-xs font-semibold text-primary-text mb-1.5">
-              العنوان التفصيلي / اسم المشروع أو الشارع
+              الوصف التفصيلي الكامل للموقع / العنوان أو اسم الشارع والمعلم
             </label>
             <input
               type="text"
               {...register("streetAddress")}
-              placeholder="طريق الملك فهد، تقاطع شارع التحلية، فيلا 14..."
+              placeholder="مثال: شمال طريق الملك سلمان، حي النرجس، الكيلو الثاني، بالقرب من..."
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
           </div>
@@ -1092,11 +1092,14 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
               <label className="block text-xs font-semibold text-primary-text mb-1.5">توفر مصدر المياه</label>
               <select
                 {...register("waterAvailability")}
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl"
+                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl cursor-pointer"
               >
                 <option value="true">متوفر (بئر أو ري نيلي)</option>
                 <option value="false">غير متوفر حالياً</option>
               </select>
+              {errors.waterAvailability && (
+                <p className="text-xs text-rose-500 mt-1">{errors.waterAvailability.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-primary-text mb-1.5">مصدر الري</label>

@@ -284,7 +284,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
               </p>
               {property.location.streetAddress && (
                 <p className="text-secondary-text leading-relaxed">
-                  <strong>العنوان:</strong> {property.location.streetAddress}
+                  <strong>الوصف التفصيلي للموقع:</strong> {property.location.streetAddress}
                 </p>
               )}
             </div>

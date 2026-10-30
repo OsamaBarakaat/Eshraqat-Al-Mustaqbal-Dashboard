@@ -158,7 +158,7 @@ export default function PropertiesListPage() {
   const publishedCount = stats.publishedProperties;
   const draftCount = stats.draftProperties;
   const soldOrRentedCount = stats.archivedProperties;
-  const discountedCount = allProperties.filter((p) => p.originalPrice && p.originalPrice > p.price).length;
+  const discountedCount = allProperties.filter((p) => (p.originalPrice && p.originalPrice > p.price) || (p.discountPercentage && p.discountPercentage > 0)).length;
 
   // Actions
   const handleTogglePublish = (prop: Property) => {

@@ -193,7 +193,7 @@ function mapBackendPropertyToDashboard(p: any): Property {
         p.category === "AGRICULTURAL"
           ? {
               landClassification: p.landClassification || "",
-              waterAvailability: Boolean(p.waterAvailability),
+              waterAvailability: p.waterAvailability === true || String(p.waterAvailability) === "true",
               waterSource: p.waterSource || undefined,
             }
           : undefined,
@@ -251,7 +251,10 @@ function mapDashboardPropertyToBackend(p: Partial<Property>): any {
     commercialRoomsCount: p.specs?.commercial?.roomsCount,
     commercialFloor: p.specs?.commercial?.floor,
     landClassification: p.specs?.agricultural?.landClassification,
-    waterAvailability: p.specs?.agricultural?.waterAvailability,
+    waterAvailability:
+      p.specs?.agricultural?.waterAvailability !== undefined
+        ? (p.specs.agricultural.waterAvailability === true || String(p.specs.agricultural.waterAvailability) === "true")
+        : undefined,
     waterSource: p.specs?.agricultural?.waterSource,
     amenities: p.amenities || [],
     seoTitle: p.seo?.seoTitle,
