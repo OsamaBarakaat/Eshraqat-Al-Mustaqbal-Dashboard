@@ -463,8 +463,8 @@ export default function DashboardPage() {
 
       {/* Two Column Grid: Recent Properties & Admin Audit Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Properties (2 Cols) */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right">
+        {/* Recent Properties (3 Cols) */}
+        <div className="lg:col-span-3 p-5 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-sm sm:text-base text-primary-text">
