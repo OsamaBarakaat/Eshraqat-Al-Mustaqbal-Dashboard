@@ -237,7 +237,7 @@ function mapDashboardPropertyToBackend(p: Partial<Property>): any {
     maintenanceFee: p.maintenanceFee ? Number(p.maintenanceFee) : undefined,
     country: p.location?.country || "المملكة العربية السعودية",
     city: p.location?.city || "الرياض",
-    areaName: p.location?.area || "حي النرجس",
+    areaName: p.location?.area?.trim() || p.location?.city || "وسط المدينة",
     streetAddress: p.location?.streetAddress,
     googleMapsUrl: p.location?.googleMapsUrl || (p as any).googleMapsUrl || undefined,
     latitude: p.location?.latitude,
