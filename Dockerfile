@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN npm install --no-audit --no-fund
 COPY . .
 # NEXT_PUBLIC_* vars are baked in at build time
 ARG NEXT_PUBLIC_API_URL
