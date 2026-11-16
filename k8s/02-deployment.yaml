@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eshraqat-dashboard
+  namespace: eshraqat
+  labels:
+    app: eshraqat-dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: eshraqat-dashboard
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eshraqat-dashboard
+  namespace: eshraqat
+  labels:
+    app: eshraqat-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eshraqat-dashboard
+  template:
+    metadata:
+      labels:
+        app: eshraqat-dashboard
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: dashboard
+          image: ghcr.io/osamabarakaat/eshraqat-al-mustaqbal-dashboard:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: dashboard-config
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+
