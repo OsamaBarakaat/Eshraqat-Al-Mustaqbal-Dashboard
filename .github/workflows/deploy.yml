@@ -61,7 +61,6 @@ jobs:
 
       # Only main deploys, so a push to dev never overwrites production
       - name: Deploy Dashboard manifests to k3s cluster (eshraqat)
-        if: github.ref == 'refs/heads/main'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           # Use a PAT with read:packages; GITHUB_TOKEN expires after the job
