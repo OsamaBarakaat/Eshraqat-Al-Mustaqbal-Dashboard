@@ -25,6 +25,7 @@ const MODULE_NAMES: Record<ModuleType, string> = {
   team: "المسؤولون وفريق العمل",
   settings: "الإعدادات العامة",
   locations: "المناطق والمدن والأحياء",
+  mapInteractions: "التفاعل مع الخريطة",
 };
 
 const ACTION_NAMES: Record<ActionType, string> = {

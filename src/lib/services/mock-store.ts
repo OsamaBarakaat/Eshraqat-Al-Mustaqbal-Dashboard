@@ -14,6 +14,7 @@ import {
   PasswordRecoveryRequest,
   QueryRecoveryRequestsParams,
 } from "@/types/recovery";
+import { MapInteraction, MapInteractionStats } from "@/types/map-interaction";
 import { apiClient } from "./api-client";
 
 import {
@@ -1806,6 +1807,59 @@ export const MockStore = {
       totalCities,
       totalProvinces,
     };
+  },
+
+  // ------------------------------------------
+  // MAP INTERACTIONS (التفاعل مع الخريطة)
+  // ------------------------------------------
+  async queryMapInteractions(query: {
+    search?: string;
+    propertyId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: MapInteraction[]; total: number; totalPages: number }> {
+    const params: Record<string, any> = {
+      page: query.page || 1,
+      limit: query.limit || 20,
+    };
+    if (query.search?.trim()) params.search = query.search.trim();
+    if (query.propertyId) params.propertyId = query.propertyId;
+    if (query.dateFrom) params.dateFrom = query.dateFrom;
+    if (query.dateTo) params.dateTo = query.dateTo;
+
+    try {
+      const res = await apiClient.get<any>("/map-interactions/admin", params);
+      const items: MapInteraction[] = res?.items || [];
+      const total = res?.pagination?.total ?? items.length;
+      const totalPages = res?.pagination?.totalPages ?? Math.max(1, Math.ceil(total / (params.limit || 20)));
+
+      return { items, total, totalPages };
+    } catch (err: any) {
+      console.error("Failed to query map interactions from backend:", err);
+      return { items: [], total: 0, totalPages: 1 };
+    }
+  },
+
+  async getMapInteractionStats(): Promise<MapInteractionStats> {
+    try {
+      const stats = await apiClient.get<MapInteractionStats>("/map-interactions/admin/stats");
+      return (
+        stats || {
+          totalInteractions: 0,
+          todayInteractions: 0,
+          uniqueClients: 0,
+        }
+      );
+    } catch (err: any) {
+      console.error("Failed to fetch map interaction stats from backend:", err);
+      return {
+        totalInteractions: 0,
+        todayInteractions: 0,
+        uniqueClients: 0,
+      };
+    }
   },
 };
 

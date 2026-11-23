@@ -95,7 +95,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
         {/* Page Header */}
         <PageHeader
           title={property.title}
-          description={`كود العقار: ${property.code} • تم التسجيل في ${formatDate(property.createdAt)}`}
+          description={`العنوان الوطني: ${property.code} • تم التسجيل في ${formatDate(property.createdAt)}`}
           breadcrumbs={[
             { label: "العقارات", href: "/properties" },
             { label: property.code },

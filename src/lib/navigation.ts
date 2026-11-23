@@ -10,6 +10,7 @@ import {
   BarChart3,
   Settings,
   KeyRound,
+  MapPinned,
   LucideIcon,
 } from "lucide-react";
 import { ModuleType } from "@/types/team";
@@ -52,6 +53,11 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         href: "/locations",
         icon: MapPin,
         module: "properties",
+      },
+      {
+        title: "التفاعل مع الخريطة",
+        href: "/map-interactions",
+        icon: MapPinned,
       },
     ],
   },

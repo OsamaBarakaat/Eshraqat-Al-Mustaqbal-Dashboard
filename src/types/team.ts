@@ -18,7 +18,8 @@ export type ModuleType =
   | "reports"
   | "team"
   | "settings"
-  | "locations";
+  | "locations"
+  | "mapInteractions";
 
 export type ActionType =
   | "view"

@@ -272,7 +272,7 @@ export default function PropertiesListPage() {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="بحث بعنوان العقار، الكود (مثل ESH-1001)، أو الحي..."
+              placeholder="بحث باسم العقار، العنوان الوطني (مثل RRRD2929)، أو الحي..."
               className="w-full px-4 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
           </div>
@@ -415,7 +415,7 @@ export default function PropertiesListPage() {
               <thead className="bg-zinc-50 border-b border-neutral-border text-secondary-text font-semibold select-none">
                 <tr>
                   <th className="py-3.5 px-4">العقار</th>
-                  <th className="py-3.5 px-4">الكود</th>
+                  <th className="py-3.5 px-4">العنوان الوطني</th>
                   <th className="py-3.5 px-4">التصنيف والغرض</th>
                   <th className="py-3.5 px-4">الموقع</th>
                   <th className="py-3.5 px-4">السعر</th>

@@ -2,7 +2,14 @@ import { z } from "zod";
 
 export const propertyFormSchema = z.object({
   title: z.string().min(5, "عنوان العقار يجب ألا يقل عن 5 أحرف"),
-  code: z.string().min(3, "كود العقار مطلوب ويجب ألا يقل عن 3 أحرف"),
+  code: z
+    .string()
+    .min(1, "العنوان الوطني للعقار مطلوب")
+    .transform((val) => val.trim().toUpperCase())
+    .refine(
+      (val) => /^[A-Z]{4}\d{4}$/.test(val) || val.length >= 3,
+      "العنوان الوطني يجب أن يتكون من 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)"
+    ),
   shortDescription: z.string().min(10, "الوصف القصير يجب ألا يقل عن 10 أحرف"),
   fullDescription: z.string().min(20, "الوصف التفصيلي يجب ألا يقل عن 20 حرفاً"),
   category: z.enum(["RESIDENTIAL", "COMMERCIAL", "AGRICULTURAL"]),

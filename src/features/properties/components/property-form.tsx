@@ -89,7 +89,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
   // Default / initial values
   const defaultValues: Partial<PropertyFormValues> = {
     title: initialData?.title || "",
-    code: initialData?.code || `ESH-${Math.floor(1000 + Math.random() * 9000)}`,
+    code: initialData?.code || "",
     shortDescription: initialData?.shortDescription || "",
     fullDescription: initialData?.fullDescription || "",
     category: initialData?.category || "RESIDENTIAL",
@@ -622,17 +622,25 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
             {errors.title && <p className="text-xs text-rose-500 mt-1">{errors.title.message}</p>}
           </div>
 
-          {/* Property Code */}
+          {/* Property National Address (Code) */}
           <div>
             <label className="block text-xs font-semibold text-primary-text mb-1.5">
-              كود العقار المميز <span className="text-rose-500">*</span>
+              العنوان الوطني للعقار <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               {...register("code")}
-              placeholder="ESH-1001"
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+              onChange={(e) => {
+                e.target.value = e.target.value.toUpperCase();
+                register("code").onChange(e);
+              }}
+              maxLength={8}
+              placeholder="RRRD2929"
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono uppercase tracking-wider focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
+            <p className="text-[11px] text-secondary-text mt-1">
+              العنوان الوطني المختصر: 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)
+            </p>
             {errors.code && <p className="text-xs text-rose-500 mt-1">{errors.code.message}</p>}
           </div>
 
