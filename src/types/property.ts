@@ -61,10 +61,11 @@ export interface PropertySEO {
 
 export interface Property {
   id: ID;
-  code: string; // e.g. "ESH-1042"
+  code: string; // e.g. "RRRD2929" National Address
+  licenseNumber?: string; // Advertising/contract license number (رقم الترخيص)
   title: string;
   shortDescription: string;
-  fullDescription: string;
+  fullDescription?: string;
   category: PropertyCategory;
   purpose: PropertyPurpose;
   status: PropertyStatus;

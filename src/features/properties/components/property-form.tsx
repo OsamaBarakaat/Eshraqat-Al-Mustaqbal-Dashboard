@@ -90,6 +90,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
   const defaultValues: Partial<PropertyFormValues> = {
     title: initialData?.title || "",
     code: initialData?.code || "",
+    licenseNumber: initialData?.licenseNumber || "",
     shortDescription: initialData?.shortDescription || "",
     fullDescription: initialData?.fullDescription || "",
     category: initialData?.category || "RESIDENTIAL",
@@ -509,9 +510,10 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
 
       const propertyPayload = {
         code: data.code,
+        licenseNumber: data.licenseNumber,
         title: data.title,
         shortDescription: data.shortDescription,
-        fullDescription: data.fullDescription,
+        fullDescription: data.fullDescription || undefined,
         category: data.category as PropertyCategory,
         purpose: data.purpose,
         status: finalStatus,
@@ -644,6 +646,25 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
             {errors.code && <p className="text-xs text-rose-500 mt-1">{errors.code.message}</p>}
           </div>
 
+          {/* License Number (رقم الترخيص - إجباري) */}
+          <div>
+            <label className="block text-xs font-semibold text-primary-text mb-1.5">
+              رقم الترخيص <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              {...register("licenseNumber")}
+              placeholder="مثال: 7200012345"
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
+            />
+            <p className="text-[11px] text-secondary-text mt-1">
+              رقم ترخيص الإعلان العقاري الصادر للمنصة
+            </p>
+            {errors.licenseNumber && (
+              <p className="text-xs text-rose-500 mt-1">{errors.licenseNumber.message}</p>
+            )}
+          </div>
+
           {/* Category */}
           <div>
             <label className="block text-xs font-semibold text-primary-text mb-1.5">
@@ -704,10 +725,10 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
             {errors.shortDescription && <p className="text-xs text-rose-500 mt-1">{errors.shortDescription.message}</p>}
           </div>
 
-          {/* Full Description */}
+          {/* Full Description (اختياري) */}
           <div className="md:col-span-3">
             <label className="block text-xs font-semibold text-primary-text mb-1.5">
-              الوصف التفصيلي الكامل <span className="text-rose-500">*</span>
+              الوصف التفصيلي الكامل <span className="text-secondary-text font-normal text-[11px]">(اختياري)</span>
             </label>
             <textarea
               rows={4}

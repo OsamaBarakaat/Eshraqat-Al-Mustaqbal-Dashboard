@@ -162,7 +162,7 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
           <div className="p-6 rounded-2xl bg-surface border border-neutral-border shadow-xs text-right space-y-4">
             <h3 className="text-base font-bold text-primary-text">الوصف الكامل للعقار</h3>
             <p className="text-xs sm:text-sm text-secondary-text leading-relaxed whitespace-pre-line">
-              {property.fullDescription}
+              {property.fullDescription || property.shortDescription}
             </p>
           </div>
 
@@ -249,6 +249,14 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
                   {statusCfg.label}
                 </span>
               </div>
+              {property.licenseNumber && (
+                <div className="p-3 rounded-xl bg-warm-white border border-neutral-border-subtle col-span-2">
+                  <span className="text-secondary-text block">رقم ترخيص الإعلان</span>
+                  <span className="font-bold font-mono text-brand-gold-deep mt-1 block">
+                    {property.licenseNumber}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Performance Stats */}

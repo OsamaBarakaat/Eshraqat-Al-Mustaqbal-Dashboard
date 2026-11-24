@@ -10,8 +10,9 @@ export const propertyFormSchema = z.object({
       (val) => /^[A-Z]{4}\d{4}$/.test(val) || val.length >= 3,
       "العنوان الوطني يجب أن يتكون من 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)"
     ),
+  licenseNumber: z.string().min(1, "رقم الترخيص إجباري للتعاقد وعرض العقار"),
   shortDescription: z.string().min(10, "الوصف القصير يجب ألا يقل عن 10 أحرف"),
-  fullDescription: z.string().min(20, "الوصف التفصيلي يجب ألا يقل عن 20 حرفاً"),
+  fullDescription: z.string().optional().default(""),
   category: z.enum(["RESIDENTIAL", "COMMERCIAL", "AGRICULTURAL"]),
   purpose: z.enum(["SALE", "RENT"]),
   status: z.enum(["PUBLISHED", "DRAFT", "ARCHIVED", "SOLD", "RENTED"]),
