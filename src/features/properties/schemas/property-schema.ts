@@ -13,9 +13,10 @@ export const propertyFormSchema = z.object({
   licenseNumber: z
     .string()
     .min(1, "رقم ترخيص الإعلان العقاري مطلوب وإجباري")
+    .transform((val) => val.trim())
     .refine(
-      (val) => /^\d{10,}$/.test(val.trim()),
-      "رقم ترخيص الإعلان العقاري يجب ألا يقل عن 10 أرقام (مثال: 7200123456)"
+      (val) => /^\d{10}$/.test(val),
+      "رقم ترخيص الإعلان العقاري يجب أن يتكون من 10 أرقام فقط لا يقل ولا يزيد (مثال: 7200123456)"
     ),
   shortDescription: z.string().min(10, "الوصف القصير يجب ألا يقل عن 10 أحرف"),
   fullDescription: z.string().optional().default(""),

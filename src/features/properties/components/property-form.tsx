@@ -646,7 +646,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
             {errors.code && <p className="text-xs text-rose-500 mt-1">{errors.code.message}</p>}
           </div>
 
-          {/* License Number (رقم الترخيص - إجباري) */}
+          {/* License Number (رقم الترخيص - إجباري 10 أرقام فقط) */}
           <div>
             <label className="block text-xs font-semibold text-primary-text mb-1.5">
               رقم ترخيص الإعلان العقاري <span className="text-rose-500">*</span>
@@ -654,11 +654,16 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
             <input
               type="text"
               {...register("licenseNumber")}
+              maxLength={10}
               placeholder="7200123456"
+              onChange={(e) => {
+                e.target.value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                register("licenseNumber").onChange(e);
+              }}
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
             <p className="text-[11px] text-secondary-text mt-1">
-              رقم الترخيص لا يقل عن 10 أرقام ويبدأ غالباً بالرقم 72 أو 71 (مثال: 7200123456)
+              رقم ترخيص الإعلان العقاري: 10 أرقام فقط لا يقل ولا يزيد (مثال: 7200123456)
             </p>
             {errors.licenseNumber && (
               <p className="text-xs text-rose-500 mt-1">{errors.licenseNumber.message}</p>
