@@ -7,10 +7,16 @@ export const propertyFormSchema = z.object({
     .min(1, "العنوان الوطني للعقار مطلوب")
     .transform((val) => val.trim().toUpperCase())
     .refine(
-      (val) => /^[A-Z]{4}\d{4}$/.test(val) || val.length >= 3,
-      "العنوان الوطني يجب أن يتكون من 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)"
+      (val) => /^[A-Z]{4}\d{4}$/.test(val),
+      "العنوان الوطني يجب أن يتكون إجبارياً من 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)"
     ),
-  licenseNumber: z.string().min(1, "رقم الترخيص إجباري للتعاقد وعرض العقار"),
+  licenseNumber: z
+    .string()
+    .min(1, "رقم ترخيص الإعلان العقاري مطلوب وإجباري")
+    .refine(
+      (val) => /^\d{10,}$/.test(val.trim()),
+      "رقم ترخيص الإعلان العقاري يجب ألا يقل عن 10 أرقام (مثال: 7200123456)"
+    ),
   shortDescription: z.string().min(10, "الوصف القصير يجب ألا يقل عن 10 أحرف"),
   fullDescription: z.string().optional().default(""),
   category: z.enum(["RESIDENTIAL", "COMMERCIAL", "AGRICULTURAL"]),

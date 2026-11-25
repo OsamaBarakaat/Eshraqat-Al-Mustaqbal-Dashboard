@@ -641,7 +641,7 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono uppercase tracking-wider focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
             <p className="text-[11px] text-secondary-text mt-1">
-              العنوان الوطني المختصر: 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)
+              العنوان الوطني المختصر: إجباري 4 أحرف إنجليزية و 4 أرقام (مثال: RRRD2929)
             </p>
             {errors.code && <p className="text-xs text-rose-500 mt-1">{errors.code.message}</p>}
           </div>
@@ -649,16 +649,16 @@ export function PropertyForm({ initialData, isEditing = false }: PropertyFormPro
           {/* License Number (رقم الترخيص - إجباري) */}
           <div>
             <label className="block text-xs font-semibold text-primary-text mb-1.5">
-              رقم الترخيص <span className="text-rose-500">*</span>
+              رقم ترخيص الإعلان العقاري <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               {...register("licenseNumber")}
-              placeholder="مثال: 7200012345"
+              placeholder="7200123456"
               className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-warm-white border border-neutral-border rounded-xl font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-gold"
             />
             <p className="text-[11px] text-secondary-text mt-1">
-              رقم ترخيص الإعلان العقاري الصادر للمنصة
+              رقم الترخيص لا يقل عن 10 أرقام ويبدأ غالباً بالرقم 72 أو 71 (مثال: 7200123456)
             </p>
             {errors.licenseNumber && (
               <p className="text-xs text-rose-500 mt-1">{errors.licenseNumber.message}</p>

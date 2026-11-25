@@ -148,6 +148,7 @@ function mapBackendPropertyToDashboard(p: any): Property {
   return {
     id: p.id,
     code: p.code,
+    licenseNumber: p.licenseNumber || undefined,
     title: p.title,
     shortDescription: p.shortDescription,
     fullDescription: p.fullDescription,
@@ -223,6 +224,7 @@ function mapBackendPropertyToDashboard(p: any): Property {
 function mapDashboardPropertyToBackend(p: Partial<Property>): any {
   return {
     code: p.code,
+    licenseNumber: p.licenseNumber || undefined,
     title: p.title,
     shortDescription: p.shortDescription,
     fullDescription: p.fullDescription,
