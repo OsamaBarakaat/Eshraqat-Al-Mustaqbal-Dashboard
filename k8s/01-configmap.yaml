@@ -6,6 +6,5 @@ metadata:
 data:
   NODE_ENV: "production"
   PORT: "3000"
-  DASHBOARD_DOMAIN: "dashboard.example.com"
-  NEXT_PUBLIC_API_URL: "https://api.example.com/api/v1"
-
+  DASHBOARD_DOMAIN: "eshraqatalmustaqbal.com"
+  NEXT_PUBLIC_API_URL: "https://eshraqatalmustaqbal.com/api/v1"

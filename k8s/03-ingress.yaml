@@ -1,6 +1,6 @@
 # ==============================================================================
-# Traefik Ingress for Admin Dashboard
-# Replace dashboard.example.com with your real domain when ready.
+# Traefik Ingress for Admin Dashboard (/admin)
+# Domain: eshraqatalmustaqbal.com
 # ==============================================================================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -14,17 +14,27 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - dashboard.example.com
-      secretName: dashboard-tls-secret
+        - eshraqatalmustaqbal.com
+        - www.eshraqatalmustaqbal.com
+      secretName: eshraqat-tls-secret
   rules:
-    - host: dashboard.example.com
+    - host: eshraqatalmustaqbal.com
       http:
         paths:
-          - path: /
+          - path: /admin
             pathType: Prefix
             backend:
               service:
                 name: eshraqat-dashboard
                 port:
                   number: 3000
-
+    - host: www.eshraqatalmustaqbal.com
+      http:
+        paths:
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: eshraqat-dashboard
+                port:
+                  number: 3000

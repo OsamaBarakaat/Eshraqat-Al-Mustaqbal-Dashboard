@@ -33,7 +33,7 @@ export function BrandLogo({
       >
         <div className="relative w-32 h-36 sm:w-40 sm:h-44 transition-transform duration-300 hover:scale-105 drop-shadow-xl">
           <Image
-            src="/Logo/Eshraqat-Al-Mustakbal-Logo.png"
+            src="/admin/Logo/Eshraqat-Al-Mustakbal-Logo.png"
             alt="شعار شركة إشراقة المستقبل للعقارات"
             fill
             sizes="(max-width: 640px) 128px, 160px"
@@ -72,7 +72,7 @@ export function BrandLogo({
       >
         <div className="relative w-full h-full">
           <Image
-            src="/Logo/Eshraqat-Al-Mustakbal-Logo.png"
+            src="/admin/Logo/Eshraqat-Al-Mustakbal-Logo.png"
             alt="شعار إشراقة المستقبل"
             fill
             sizes="40px"

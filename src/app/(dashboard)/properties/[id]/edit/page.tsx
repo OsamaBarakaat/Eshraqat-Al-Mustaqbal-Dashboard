@@ -29,7 +29,7 @@ export default function EditPropertyPage({ params }: { params: Promise<{ id: str
           description="لم يتم العثور على العقار المطلوب، ربما تم حذفه أو أن المعرّف غير صحيح."
           actionLabel="العودة لقائمة العقارات"
           onAction={() => {
-            window.location.href = "/properties";
+            window.location.href = "/admin/properties";
           }}
         />
       </div>
