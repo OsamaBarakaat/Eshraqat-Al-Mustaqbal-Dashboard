@@ -111,10 +111,8 @@ jobs:
               --docker-password=${GHCR_PULL_TOKEN} \
               --dry-run=client -o yaml | sudo kubectl apply -f -
 
+            sed -i "s|${IMAGE_NAME}:latest|${IMAGE_NAME}:${GITHUB_SHA}|g" 02-deployment.yaml
             sudo kubectl apply -k .
-
-            sudo kubectl -n ${K8S_NAMESPACE} set image deployment/${DEPLOYMENT_NAME} \
-              ${CONTAINER_NAME}=${IMAGE_NAME}:${GITHUB_SHA}
 
             sudo kubectl -n ${K8S_NAMESPACE} rollout status deployment/${DEPLOYMENT_NAME} --timeout=180s
           EOF

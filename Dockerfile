@@ -6,7 +6,7 @@ COPY . .
 # NEXT_PUBLIC_* vars are baked in at build time
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-RUN npm run build && npm prune --omit=dev
+RUN npm run build
 
 FROM node:22-bookworm-slim
 WORKDIR /app

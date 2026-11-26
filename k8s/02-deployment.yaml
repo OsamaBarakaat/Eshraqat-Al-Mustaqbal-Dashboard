@@ -37,7 +37,7 @@ spec:
       containers:
         - name: dashboard
           image: ghcr.io/osamabarakaat/eshraqat-al-mustaqbal-dashboard:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
               name: http
