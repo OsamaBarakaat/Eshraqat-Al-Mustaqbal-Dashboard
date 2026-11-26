@@ -17,7 +17,7 @@ env:
   K8S_NAMESPACE: eshraqat
   DEPLOYMENT_NAME: eshraqat-dashboard
   CONTAINER_NAME: dashboard
-  SSH_HOST: 80.225.65.121
+  SSH_HOST: 79.72.6.51
   SSH_USER: ubuntu
   # Owner of the PAT stored in the GHCR_TOKEN secret (must match the token's owner)
   GHCR_PULL_USER: osamabarakaat
